@@ -1,47 +1,64 @@
 package cat.insvidreres.imp.m13projecte.service;
 
 import cat.insvidreres.imp.m13projecte.entities.User;
+import cat.insvidreres.imp.m13projecte.utils.Utils;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.Firestore;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.UserRecord;
 import com.google.firebase.cloud.FirestoreClient;
 //import com.google.firestore.v1.WriteResult;
 import com.google.cloud.firestore.*;
 import com.google.gson.JsonObject;
 import org.springframework.stereotype.Service;
 
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 
 @Service
-public class UserService {
-
-    enum CollectionName {
-        USER("users"),
-        POST("posts"),
-        LIKE("likes"),
-        COMMENT("comments");
-
-        private final String TEXT;
-
-        CollectionName(final String TEXT) {
-            this.TEXT = TEXT;
-        }
-
-        @Override
-        public String toString() {
-            return TEXT;
-        }
-    }
+public class UserService implements Utils {
     private static final String COLLECTION_NAME = "users";
 
     public String saveUser(User user) throws InterruptedException, ExecutionException {
         ApiFuture<WriteResult> collectionApiFuture = null;
 
         try {
+
+            user.setSalt(generateRandomSalt());  //Generates salt and puts it in salt field
+
+            //Auth fields
+            UserRecord.CreateRequest request = new UserRecord.CreateRequest()
+                    .setEmail(user.getEmail())
+                    .setUid(user.getEmail())
+                    .setEmailVerified(false)
+                    .setPassword(                    //Hash + Salt
+                            encryptPassword(
+                                    user.getPassword(),
+                                    user.getSalt()
+                            )
+                    )
+                    .setPhoneNumber(user.getPhoneNumber())
+                    .setDisplayName(user.getFirstName());
+
+            //Firestore pw field encrypted
+            user.setPassword(
+                    encryptPassword(
+                            user.getPassword(),
+                            user.getSalt()
+                    )
+            );
+
+
+            UserRecord userRecord = FirebaseAuth.getInstance().createUser(request);
+            System.out.println("Successfully created new user: " + userRecord.getUid());
+
+
             Firestore dbFirestore = FirestoreClient.getFirestore();
-            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).document(user.getFirstName()).set(user);
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).document(user.getEmail()).set(user);
 
             return collectionApiFuture.get().getUpdateTime().toString();
             // return generateResponse(200,
@@ -82,7 +99,7 @@ public class UserService {
 
         try {
             Firestore dbFirestore = FirestoreClient.getFirestore();
-            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).document(user.getFirstName()).set(user);
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).document(user.getEmail()).set(user);
 
             return collectionApiFuture.get().getUpdateTime().toString();
             // return generateResponse(200,
@@ -115,6 +132,29 @@ public class UserService {
         }
     }
 
+    public User testSaltHashGet(String docName, String password) throws ExecutionException, InterruptedException, NoSuchAlgorithmException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        DocumentReference documentReference = dbFirestore.collection(CollectionName.USER.toString()).document(docName);
+        ApiFuture<DocumentSnapshot> future = documentReference.get();
+        DocumentSnapshot doc = future.get();
+
+        String salt = (String) doc.get("salt");
+
+        password = encryptPassword(password, salt);
+
+        if (doc.exists()) {
+            System.out.println("doc EXISTS in test :)");
+
+            String pw = Objects.requireNonNull(doc.get("password")).toString();
+            pw = encryptPassword(pw, salt);
+
+            System.out.println("pw from doc  |  " + pw);
+            if (Objects.equals(pw, password))
+                return doc.toObject(User.class);
+            else return null;
+        } else return null;
+    }
+
     public List<User> getUsers() throws ExecutionException, InterruptedException {
 
         List<User> users = new ArrayList<>();
@@ -138,6 +178,8 @@ public class UserService {
             return null;
         }
     }
+
+
 
 
     public JsonObject generateResponse(int code, String date, String message) {

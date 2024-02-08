@@ -5,8 +5,17 @@ public class Comment {
     private CommentInstance[] comments;
 
     static class CommentInstance {
+        private String docName;
         private String userId;
         private String comment;
+
+        public String getDocName() {
+            return docName;
+        }
+
+        public void setDocName(String docName) {
+            this.docName = docName;
+        }
 
         public String getComment() {
             return comment;

@@ -6,6 +6,7 @@ import cat.insvidreres.imp.m13projecte.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
@@ -28,6 +29,13 @@ public class UserController {
 
         return userService.getUsers();
     }
+
+    @GetMapping("/test/user/{docName}/{password}")
+    public User getUserWithHash(@PathVariable String docName, @PathVariable String password) throws ExecutionException, InterruptedException, NoSuchAlgorithmException {
+
+        return userService.testSaltHashGet(docName, password);
+    }
+
 
     @GetMapping("/user/{docName}")
     public User getUser(@PathVariable String docName) throws ExecutionException, InterruptedException {
