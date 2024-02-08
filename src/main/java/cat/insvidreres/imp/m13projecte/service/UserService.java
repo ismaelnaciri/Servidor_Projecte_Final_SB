@@ -1,6 +1,7 @@
 package cat.insvidreres.imp.m13projecte.service;
 
 import cat.insvidreres.imp.m13projecte.entities.User;
+import cat.insvidreres.imp.m13projecte.utils.JSONResponse;
 import cat.insvidreres.imp.m13projecte.utils.Utils;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.Firestore;
@@ -22,6 +23,7 @@ import java.util.concurrent.ExecutionException;
 @Service
 public class UserService implements Utils {
     private static final String COLLECTION_NAME = "users";
+    private static final Firestore DB_FIRESTORE = FirestoreClient.getFirestore();
 
     public String saveUser(User user) throws InterruptedException, ExecutionException {
         ApiFuture<WriteResult> collectionApiFuture = null;
@@ -57,8 +59,8 @@ public class UserService implements Utils {
             System.out.println("Successfully created new user: " + userRecord.getUid());
 
 
-            Firestore dbFirestore = FirestoreClient.getFirestore();
-            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).document(user.getEmail()).set(user);
+
+            collectionApiFuture = DB_FIRESTORE.collection(CollectionName.USER.toString()).document(user.getEmail()).set(user);
 
             return collectionApiFuture.get().getUpdateTime().toString();
             // return generateResponse(200,
@@ -82,8 +84,7 @@ public class UserService implements Utils {
         ApiFuture<WriteResult> collectionApiFuture = null;
 
         try {
-            Firestore dbFirestore = FirestoreClient.getFirestore();
-            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).document(docName).delete();
+            collectionApiFuture = DB_FIRESTORE.collection(CollectionName.USER.toString()).document(docName).delete();
 
             return collectionApiFuture.get().getUpdateTime().toString();
         } catch (Exception e) {
@@ -98,8 +99,7 @@ public class UserService implements Utils {
         ApiFuture<WriteResult> collectionApiFuture = null;
 
         try {
-            Firestore dbFirestore = FirestoreClient.getFirestore();
-            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).document(user.getEmail()).set(user);
+            collectionApiFuture = DB_FIRESTORE.collection(CollectionName.USER.toString()).document(user.getEmail()).set(user);
 
             return collectionApiFuture.get().getUpdateTime().toString();
             // return generateResponse(200,
@@ -116,25 +116,33 @@ public class UserService implements Utils {
         }
     }
 
-    public User getUserDetails(String docName) throws ExecutionException, InterruptedException {
+    public JSONResponse getUserDetails(String docName) throws ExecutionException, InterruptedException {
+        JSONResponse response = new JSONResponse();
 
-        Firestore dbFirestore = FirestoreClient.getFirestore();
-        DocumentReference documentReference = dbFirestore.collection(CollectionName.USER.toString()).document(docName);
-        ApiFuture<DocumentSnapshot> future = documentReference.get();
-        DocumentSnapshot doc = future.get();
+        try {
+            DocumentReference documentReference = DB_FIRESTORE.collection(CollectionName.USER.toString()).document(docName);
+            ApiFuture<DocumentSnapshot> future = documentReference.get();
+            DocumentSnapshot doc = future.get();
 
-        User user = null;
-        if (doc.exists()) {
-            user = doc.toObject(User.class);
-            return user;
-        } else {
-            return null;
+            User user = null;
+            if (doc.exists()) {
+                user = doc.toObject(User.class);
+                response.setData(user);
+
+                return response;
+            } else {
+                return null;
+            }
+        } catch (Exception e) {
+            response.setResponseNo(500);
+            response.setMessage(e.getMessage());
+//            response.
         }
+        return null;
     }
 
     public User testSaltHashGet(String docName, String password) throws ExecutionException, InterruptedException, NoSuchAlgorithmException {
-        Firestore dbFirestore = FirestoreClient.getFirestore();
-        DocumentReference documentReference = dbFirestore.collection(CollectionName.USER.toString()).document(docName);
+        DocumentReference documentReference = DB_FIRESTORE.collection(CollectionName.USER.toString()).document(docName);
         ApiFuture<DocumentSnapshot> future = documentReference.get();
         DocumentSnapshot doc = future.get();
 
@@ -155,28 +163,37 @@ public class UserService implements Utils {
         } else return null;
     }
 
-    public List<User> getUsers() throws ExecutionException, InterruptedException {
+    public JSONResponse getUsers() throws ExecutionException, InterruptedException {
+        JSONResponse response = new JSONResponse();
 
-        List<User> users = new ArrayList<>();
-        Firestore dbFirestore = FirestoreClient.getFirestore();
-        Iterable<DocumentReference> documentReference = dbFirestore.collection(COLLECTION_NAME).listDocuments();
-        Iterator<DocumentReference> iterator = documentReference.iterator();
+        try {
+            Iterable<DocumentReference> documentReference = DB_FIRESTORE.collection(COLLECTION_NAME).listDocuments();
+            Iterator<DocumentReference> iterator = documentReference.iterator();
 
-        if (iterator != null) {
+            if (iterator != null) {
 
-            while (iterator.hasNext()) {
-                DocumentReference dr = iterator.next();
-                ApiFuture<DocumentSnapshot> future = dr.get();
-                DocumentSnapshot doc = future.get();
+                while (iterator.hasNext()) {
+                    DocumentReference dr = iterator.next();
+                    ApiFuture<DocumentSnapshot> future = dr.get();
+                    DocumentSnapshot doc = future.get();
 
-                User user = doc.toObject(User.class);
-                users.add(user);
+                    User user = doc.toObject(User.class);
+                    response.setData(user);
+                }
+
+                response.setMessage("Users added correctly");
+                response.setResponseNo(200);
+                return response;
             }
+        } catch (Exception e) {
+            response.setMessage(e.getMessage());
+            response.setResponseNo(500);
+            response.setData("");
 
-            return users;
-        } else {
-            return null;
+            return response;
         }
+
+        return null;
     }
 
 
