@@ -3,6 +3,7 @@ package cat.insvidreres.imp.m13projecte.controller;
 
 import cat.insvidreres.imp.m13projecte.entities.User;
 import cat.insvidreres.imp.m13projecte.service.UserService;
+import cat.insvidreres.imp.m13projecte.utils.JSONResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,41 +19,42 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+
     @PostMapping("/users")
-    public String saveUser(@RequestBody User user) throws ExecutionException, InterruptedException {
+    public JSONResponse saveUser(@RequestBody User user) throws ExecutionException, InterruptedException {
 
         return userService.saveUser(user);
     }
 
     @GetMapping("/users")
-    public List<User> getAllUsers() throws ExecutionException, InterruptedException {
+    public JSONResponse getAllUsers() throws ExecutionException, InterruptedException {
 
         return userService.getUsers();
     }
 
-    @GetMapping("/test/user/{docName}/{password}")
-    public User getUserWithHash(@PathVariable String docName, @PathVariable String password) throws ExecutionException, InterruptedException, NoSuchAlgorithmException {
+    @GetMapping("/test/user/{email}/{password}")
+    public JSONResponse getUserWithHash(@PathVariable String email, @PathVariable String password) throws ExecutionException, InterruptedException, NoSuchAlgorithmException {
 
-        return userService.testSaltHashGet(docName, password);
+        return userService.testSaltHashGet(email, password);
     }
 
 
-    @GetMapping("/user/{docName}")
-    public User getUser(@PathVariable String docName) throws ExecutionException, InterruptedException {
+    @GetMapping("/user/{email}")
+    public JSONResponse getUser(@PathVariable String email) throws ExecutionException, InterruptedException {
 
-        return userService.getUserDetails(docName);
+        return userService.getUserDetails(email);
     }
 
     //Change to "/user/{firstName}"
     @PutMapping("/users")
-    public String updateUser(@RequestBody User user) throws ExecutionException, InterruptedException {
+    public JSONResponse updateUser(@RequestBody User user) throws ExecutionException, InterruptedException {
 
         return userService.updateUser(user);
     }
 
     @DeleteMapping("/users")
-    public String deleteUser(@RequestBody String docName) throws ExecutionException, InterruptedException {
+    public JSONResponse deleteUser(@RequestBody String email) throws ExecutionException, InterruptedException {
 
-        return userService.deleteUser(docName);
+        return userService.deleteUser(email);
     }
 }

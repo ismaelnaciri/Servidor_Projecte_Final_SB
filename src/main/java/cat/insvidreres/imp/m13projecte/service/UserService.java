@@ -10,23 +10,28 @@ import com.google.firebase.auth.UserRecord;
 import com.google.firebase.cloud.FirestoreClient;
 //import com.google.firestore.v1.WriteResult;
 import com.google.cloud.firestore.*;
-import com.google.gson.JsonObject;
 import org.springframework.stereotype.Service;
 
 import java.security.NoSuchAlgorithmException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 public class UserService implements Utils {
     private static final String COLLECTION_NAME = "users";
     private static final Firestore DB_FIRESTORE = FirestoreClient.getFirestore();
 
-    public String saveUser(User user) throws InterruptedException, ExecutionException {
-        ApiFuture<WriteResult> collectionApiFuture = null;
+    public JSONResponse saveUser(User user) throws InterruptedException, ExecutionException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> collectionApiFuture = null;
+
+        List<Object> dataToShow = new ArrayList<>();
+
 
         try {
 
@@ -54,120 +59,207 @@ public class UserService implements Utils {
                     )
             );
 
+            UserRecord userExist = FirebaseAuth.getInstance().getUserByEmail(user.getEmail());
 
-            UserRecord userRecord = FirebaseAuth.getInstance().createUser(request);
-            System.out.println("Successfully created new user: " + userRecord.getUid());
+            if (userExist == null) {
+                UserRecord userRecord = FirebaseAuth.getInstance().createUser(request);
+                System.out.println("Successfully created new user: " + userRecord.getUid());
+            } else {
+                return generateResponse(401,
+                        LocalDate.now().toString(),
+                        "Error in creating user!",
+                        null);
+            }
 
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", user.getEmail()).get();
 
+            if (collectionApiFuture.isDone()) {
 
-            collectionApiFuture = DB_FIRESTORE.collection(CollectionName.USER.toString()).document(user.getEmail()).set(user);
+                collectionApiFuture.get().forEach((doc) -> {
+                    if (Objects.equals(doc.get("email"), user.getEmail())) {
+                        dataToShow.add(user);
 
-            return collectionApiFuture.get().getUpdateTime().toString();
-            // return generateResponse(200,
-            // collectionApiFuture.get().getUpdateTime().toString(), "User created
-            // correctly");
+                        dbFirestore.collection(CollectionName.USER.toString()).add(user);
+                    }
+                });
+            }
+
+            return generateResponse(200,
+                    LocalDate.now().toString(),
+                    "Successfully created new user",
+                    dataToShow);
+
         } catch (Exception e) {
             System.out.println("ERROR | " + e.getMessage());
-            e.printStackTrace();
 
-            return "Error whilst saving user";
-            // return generateResponse
-            // (500,
-            // collectionApiFuture.get().getUpdateTime().toString(),
-            // "ERROR WHILST CREATING USER")
-            // .asMap();
+            return generateResponse(500,
+                    LocalDate.now().toString(),
+                    "ERROR WHILST CREATING USER",
+                    null);
         }
 
     }
 
-    public String deleteUser(String docName) throws InterruptedException, ExecutionException {
-        ApiFuture<WriteResult> collectionApiFuture = null;
+    public JSONResponse deleteUser(String email) throws InterruptedException, ExecutionException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> collectionApiFuture = null;
 
         try {
-            collectionApiFuture = DB_FIRESTORE.collection(CollectionName.USER.toString()).document(docName).delete();
 
-            return collectionApiFuture.get().getUpdateTime().toString();
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
+
+            if (collectionApiFuture.isDone()) {
+
+                collectionApiFuture.get().forEach((doc) -> {
+                    if (Objects.equals(doc.get("email"), email)) {
+
+                        dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).delete();
+                    }
+                });
+            }
+
+            return generateResponse(200,
+                    LocalDate.now().toString(),
+                    "User deleted successfully!",
+                    null);
         } catch (Exception e) {
             System.out.println("ERROR DELETING USER | " + e.getMessage());
-            e.printStackTrace();
 
-            return "Error whilst deleting user";
+            return generateResponse(500,
+                    LocalDate.now().toString(),
+                    "ERROR whilst deleting user",
+                    null);
         }
     }
 
-    public String updateUser(User user) {
-        ApiFuture<WriteResult> collectionApiFuture = null;
+    public JSONResponse updateUser(User user) {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> collectionApiFuture = null;
+        List<Object> dataToShow = new ArrayList<>();
+
 
         try {
-            collectionApiFuture = DB_FIRESTORE.collection(CollectionName.USER.toString()).document(user.getEmail()).set(user);
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", user.getEmail()).get();
 
-            return collectionApiFuture.get().getUpdateTime().toString();
-            // return generateResponse(200,
-            // collectionApiFuture.get().getUpdateTime().toString(),
-            // "User updated correctly");
+            if (collectionApiFuture.isDone()) {
+
+                collectionApiFuture.get().forEach((doc) -> {
+                    if (Objects.equals(doc.get("email"), user.getEmail())) {
+                        dataToShow.add(user);
+
+                        dbFirestore.collection(CollectionName.USER.toString()).add(user);
+                    }
+                });
+            }
+
+            return generateResponse(200,
+                    LocalDate.now().toString(),
+                    "User updated successfully!",
+                    dataToShow
+            );
         } catch (ExecutionException | InterruptedException e) {
             System.out.println("ERROR | " + e.getMessage());
-            e.printStackTrace();
 
-            return "Error whilst updating user";
-            // return generateResponse(500,
-            // collectionApiFuture.get().getUpdateTime().toString(),
-            // "ERROR WHILST UPDATING USER");
+            return generateResponse(500,
+                    LocalDate.now().toString(),
+                    "ERROR WHILST UPDATING USER",
+                    null);
         }
     }
 
-    public JSONResponse getUserDetails(String docName) throws ExecutionException, InterruptedException {
-        JSONResponse response = new JSONResponse();
+    public JSONResponse getUserDetails(String email) throws ExecutionException, InterruptedException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> collectionApiFuture = null;
+        List<Object> dataToShow = new ArrayList<>();
 
         try {
-            DocumentReference documentReference = DB_FIRESTORE.collection(CollectionName.USER.toString()).document(docName);
-            ApiFuture<DocumentSnapshot> future = documentReference.get();
-            DocumentSnapshot doc = future.get();
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
 
-            User user = null;
-            if (doc.exists()) {
-                user = doc.toObject(User.class);
-                response.setData(user);
-
-                return response;
-            } else {
-                return null;
+            if (collectionApiFuture.isDone()) {
+                collectionApiFuture.get().forEach((doc) -> {
+                    if (Objects.equals(doc.get("email"), email)) {
+                        dataToShow.add(doc);
+                    }
+                });
             }
+
+            return generateResponse(403,
+                    LocalDate.now().toString(),
+                    "Wrong email. Check again.",
+                    dataToShow);
+
         } catch (Exception e) {
-            response.setResponseNo(500);
-            response.setMessage(e.getMessage());
-//            response.
+            return generateResponse(500,
+                    LocalDate.now().toString(),
+                    "Error in getting the user details. Please contact support for further infromation.",
+                    null);
         }
-        return null;
     }
 
-    public User testSaltHashGet(String docName, String password) throws ExecutionException, InterruptedException, NoSuchAlgorithmException {
-        DocumentReference documentReference = DB_FIRESTORE.collection(CollectionName.USER.toString()).document(docName);
-        ApiFuture<DocumentSnapshot> future = documentReference.get();
-        DocumentSnapshot doc = future.get();
+    public JSONResponse testSaltHashGet(String email, String password) throws ExecutionException, InterruptedException, NoSuchAlgorithmException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> collectionApiFuture = null;
+        List<Object> dataToShow = new ArrayList<>();
 
-        String salt = (String) doc.get("salt");
+        AtomicReference<String> paramPW = new AtomicReference<>("");
 
-        password = encryptPassword(password, salt);
 
-        if (doc.exists()) {
-            System.out.println("doc EXISTS in test :)");
+        try {
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
 
-            String pw = Objects.requireNonNull(doc.get("password")).toString();
-            pw = encryptPassword(pw, salt);
+            if (collectionApiFuture.isDone()) {
+                collectionApiFuture.get().forEach((doc) -> {
+                    if (Objects.equals(doc.get("email"), email)) {
+                        String salt = (String) doc.get("salt");
 
-            System.out.println("pw from doc  |  " + pw);
-            if (Objects.equals(pw, password))
-                return doc.toObject(User.class);
-            else return null;
-        } else return null;
+                        try {
+                            paramPW.set(encryptPassword(password, salt));
+
+                            System.out.println("doc EXISTS in test :)");
+
+                            String pw = Objects.requireNonNull(doc.get("password")).toString();
+                            pw = encryptPassword(pw, salt);
+
+                            System.out.println("pw from doc  |  " + pw);
+                            if (Objects.equals(pw, paramPW.get())) {
+                                dataToShow.add(doc.toObject(User.class));
+
+                            }
+                        } catch (NoSuchAlgorithmException e) {
+                            generateResponse(500,
+                                    LocalDate.now().toString(),
+                                    e.getMessage(),
+                                    null);
+                        }
+                    }
+                });
+
+                return generateResponse(200,
+                        LocalDate.now().toString(),
+                        "User gotten with hash correctly",
+                        dataToShow);
+
+            }
+        } catch (Exception e) {
+            return generateResponse(500,
+                    LocalDate.now().toString(),
+                    e.getMessage(),
+                    null);
+        }
+
+
+        return generateResponse(420,
+                LocalDate.now().toString(),
+                "Thrown in saltHashGet, look into it",
+                null);
     }
 
     public JSONResponse getUsers() throws ExecutionException, InterruptedException {
-        JSONResponse response = new JSONResponse();
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        List<Object> dataToShow = new ArrayList<>();
 
         try {
-            Iterable<DocumentReference> documentReference = DB_FIRESTORE.collection(COLLECTION_NAME).listDocuments();
+            Iterable<DocumentReference> documentReference = dbFirestore.collection(CollectionName.USER.toString()).listDocuments();
             Iterator<DocumentReference> iterator = documentReference.iterator();
 
             if (iterator != null) {
@@ -178,39 +270,34 @@ public class UserService implements Utils {
                     DocumentSnapshot doc = future.get();
 
                     User user = doc.toObject(User.class);
-                    response.setData(user);
+                    dataToShow.add(user);
                 }
 
-                response.setMessage("Users added correctly");
-                response.setResponseNo(200);
-                return response;
+                return generateResponse(200,
+                        LocalDate.now().toString(),
+                        "Users retreived correctly.",
+                        dataToShow);
             }
         } catch (Exception e) {
-            response.setMessage(e.getMessage());
-            response.setResponseNo(500);
-            response.setData("");
 
-            return response;
+            return generateResponse(500,
+                    LocalDate.now().toString(),
+                    e.getMessage(),
+                    null);
         }
 
-        return null;
+        return generateResponse(500,
+                LocalDate.now().toString(),
+                "ERROR ERROR ERROR",
+                null);
     }
 
 
-
-
-    public JsonObject generateResponse(int code, String date, String message) {
-        JsonObject response = new JsonObject();
-
-        System.out.println("DATE GIVEN IN PARAMETERS : " + date);
-
-        response.addProperty("code", code);
-        System.out.println("code added | " + response.get("code"));
-        response.addProperty("date", date);
-        System.out.println("date added | " + response.get("date"));
-        response.addProperty("message", message);
-        System.out.println("message added | " + response.get("message"));
-
-        return response;
+    public JSONResponse generateResponse(int code, String date, String message, List<Object> data) {
+        if (data == null) {
+            return new JSONResponse(code, date, message);
+        } else {
+            return new JSONResponse(code, date, message, data);
+        }
     }
 }

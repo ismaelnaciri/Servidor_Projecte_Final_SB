@@ -6,8 +6,22 @@ import java.util.List;
 
 public class JSONResponse {
     private int responseNo;
+    private String date;
     private String message;
     private List<Object> data = new ArrayList<>();
+
+    public JSONResponse(int responseNo, String date, String message, List<Object> data) {
+        this.responseNo = responseNo;
+        this.date = date;
+        this.message = message;
+        this.data = data;
+    }
+
+    public JSONResponse(int responseNo, String date, String message) {
+        this.responseNo = responseNo;
+        this.date = date;
+        this.message = message;
+    }
 
     public int getResponseNo() {
         return responseNo;
@@ -15,6 +29,14 @@ public class JSONResponse {
 
     public void setResponseNo(int responseNo) {
         this.responseNo = responseNo;
+    }
+
+    public String getDate() {
+        return date;
+    }
+
+    public void setDate(String date) {
+        this.date = date;
     }
 
     public String getMessage() {
