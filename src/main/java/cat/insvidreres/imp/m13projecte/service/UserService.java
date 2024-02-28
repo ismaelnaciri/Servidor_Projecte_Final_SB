@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicReference;
 @Service
 public class UserService implements Utils {
     private static final String COLLECTION_NAME = "users";
-    private static final Firestore DB_FIRESTORE = FirestoreClient.getFirestore();
 
     public JSONResponse saveUser(User user) throws InterruptedException, ExecutionException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
