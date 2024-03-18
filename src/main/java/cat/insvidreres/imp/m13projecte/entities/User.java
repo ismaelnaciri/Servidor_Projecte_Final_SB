@@ -1,12 +1,14 @@
 package cat.insvidreres.imp.m13projecte.entities;
 
+//import org.springframework.cloud.gcp.data.firestore.Document;
+
+//@Document(collectionName = "users")
 public class User {
 
     //For Spring Boot name of variables, getters and setters has to be the same that in firestore
     private String id;
     private String email;
     private String password;
-    private String salt;
     private String firstName;
     private String lastName;
     private int age;
@@ -34,14 +36,6 @@ public class User {
 
     public void setPassword(String password) {
         this.password = password;
-    }
-
-    public String getSalt() {
-        return salt;
-    }
-
-    public void setSalt(String salt) {
-        this.salt = salt;
     }
 
     public String getFirstName() {
