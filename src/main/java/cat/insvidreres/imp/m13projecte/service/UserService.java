@@ -1,17 +1,25 @@
 package cat.insvidreres.imp.m13projecte.service;
 
+import cat.insvidreres.imp.m13projecte.entities.GoogleLoginResponse;
 import cat.insvidreres.imp.m13projecte.entities.User;
 import cat.insvidreres.imp.m13projecte.utils.JSONResponse;
 import cat.insvidreres.imp.m13projecte.utils.Utils;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.Firestore;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseToken;
 import com.google.firebase.auth.UserRecord;
 import com.google.firebase.cloud.FirestoreClient;
 //import com.google.firestore.v1.WriteResult;
 import com.google.cloud.firestore.*;
+import com.google.gson.Gson;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -43,12 +51,12 @@ public class UserService implements Utils {
                         "':' is not allowed in the password",
                         dataToShow);
             }
-            //Auth fields
+
             UserRecord.CreateRequest request = new UserRecord.CreateRequest()
                     .setEmail(user.getEmail())
                     .setUid(user.getEmail())
                     .setEmailVerified(false)
-                    .setPassword(                    //Hash + Salt
+                    .setPassword(
                             encryptPassword(
                                     user.getPassword(),
                                     Utils.SALT
@@ -57,7 +65,7 @@ public class UserService implements Utils {
                     .setPhoneNumber(user.getPhoneNumber())
                     .setDisplayName(user.getFirstName());
 
-            //Firestore pw field encrypted
+
             user.setPassword(
                     encryptPassword(
                             user.getPassword(),
@@ -368,6 +376,100 @@ public class UserService implements Utils {
                 LocalDateTime.now().toString(),
                 "ERROR ERROR ERROR",
                 null);
+    }
+
+    public JSONResponse login(User user) {
+        List<Object> dataToShow = new ArrayList<>();
+
+        try {
+            return signInWithEmailAndPassword(user);
+
+        } catch (Exception e) {
+            return generateResponse(
+                    500,
+                    LocalDateTime.now().toString(),
+                    e.getMessage(),
+                    null
+            );
+        }
+    }
+
+    public JSONResponse signInWithEmailAndPassword(User user) {
+        try {
+            List<Object> dataToShow = new ArrayList<>(); // Changed to List<String>
+            URL url = new URL("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyB6sjfyGU9KgP_olEaTYAJ6UmmbceWmgGs");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+
+            String encryptedPassword = encryptPassword(user.getPassword(), SALT);
+            user.setPassword(encryptedPassword);
+
+            Map<String, String> requestBody = new HashMap<>();
+            requestBody.put("email", user.getEmail());
+            requestBody.put("password", user.getPassword());
+            String jsonBody = new Gson().toJson(requestBody);
+
+            try (OutputStreamWriter writer = new OutputStreamWriter(conn.getOutputStream())) {
+                writer.write(jsonBody);
+                writer.flush();
+            }
+
+            int responseCode = conn.getResponseCode(); // Get response code
+            if (responseCode == HttpURLConnection.HTTP_OK) { // Check if response is OK
+                Gson gson = new Gson();
+                GoogleLoginResponse response = null;
+                List<String> temp = new ArrayList<>();
+
+                try (Scanner scanner = new Scanner(conn.getInputStream())) {
+                    while (scanner.hasNextLine()) {
+                        temp.add(scanner.nextLine());
+                    }
+                    String jsonResponse = String.join("\n", temp);
+                    response = gson.fromJson(jsonResponse, GoogleLoginResponse.class);
+                }
+
+                //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
+                //In client getCurrentUser id, if both have the same then proceed
+                try {
+                    FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(response.getIdToken());
+                    if (FirebaseAuth.getInstance().getUser(decodedToken.getUid()) != null) {
+                        dataToShow.add(response);
+
+                        return generateResponse(
+                                responseCode,
+                                LocalDateTime.now().toString(),
+                                "?wtf",
+                                dataToShow
+                        );
+                    }
+                } catch (Exception e) {
+                    return generateResponse(
+                            401,
+                            LocalDateTime.now().toString(),
+                            e.getMessage(),
+                            null
+                    );
+                }
+
+            } else {
+                return generateResponse(
+                        responseCode,
+                        LocalDateTime.now().toString(),
+                        "Error: " + conn.getResponseMessage(),
+                        null
+                );
+            }
+        } catch (Exception e) {
+            return generateResponse(
+                    500,
+                    LocalDateTime.now().toString(),
+                    e.getMessage(),
+                    null
+            );
+        }
+        return null;
     }
 
 

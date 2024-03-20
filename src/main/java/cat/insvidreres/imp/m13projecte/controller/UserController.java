@@ -26,6 +26,12 @@ public class UserController {
         return userService.saveUser(user);
     }
 
+    @PostMapping("/users/login")
+    public JSONResponse userLogin(@RequestBody User user) throws ExecutionException, InterruptedException {
+
+        return userService.login(user);
+    }
+
     @GetMapping("/users")
     public JSONResponse getAllUsers() throws ExecutionException, InterruptedException {
 
