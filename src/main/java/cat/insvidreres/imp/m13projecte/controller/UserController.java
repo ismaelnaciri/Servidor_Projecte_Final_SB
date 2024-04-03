@@ -38,11 +38,11 @@ public class UserController {
         return userService.getUsers();
     }
 
-    @GetMapping("/test/user/{email}/{password}")
-    public JSONResponse getUserWithHash(@PathVariable String email, @PathVariable String password) throws ExecutionException, InterruptedException, NoSuchAlgorithmException {
-
-        return userService.testSaltHashGet(email, password);
-    }
+//    @GetMapping("/test/user/{email}/{password}")
+//    public JSONResponse getUserWithHash(@PathVariable String email, @PathVariable String password) throws ExecutionException, InterruptedException, NoSuchAlgorithmException {
+//
+//        return userService.testSaltHashGet(email, password);
+//    }
 
 
     @GetMapping("/user/{email}")

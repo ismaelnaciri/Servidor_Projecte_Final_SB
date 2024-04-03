@@ -120,6 +120,7 @@ public class UserService implements Utils {
                     userToInsert.put("age", user.getAge());
                     userToInsert.put("password", user.getPassword());
                     userToInsert.put("email", user.getEmail());
+                    userToInsert.put("phoneNumber", user.getPhoneNumber());
 
                     dataToShow.add(userToInsert);
                     dbFirestore.collection(CollectionName.USER.toString()).add(userToInsert);
@@ -445,6 +446,8 @@ public class UserService implements Utils {
                         );
                     }
                 } catch (Exception e) {
+                    System.out.println("Error sussy | " + e.getMessage());
+
                     return generateResponse(
                             401,
                             LocalDateTime.now().toString(),
