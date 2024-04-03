@@ -20,7 +20,7 @@ public class FirebaseInitialization {
 
         try {
             serviceAccount = new FileInputStream(
-                    "C:\\IdeaProjects\\2nDAM\\m13projecte\\src\\main\\resources\\serviceAccount.json");
+                    "C:\\Users\\Pau Casas\\IdeaProjects\\Servidor_Projecte_Final_SB\\src\\main\\resources\\serviceAccount.json");
 
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))

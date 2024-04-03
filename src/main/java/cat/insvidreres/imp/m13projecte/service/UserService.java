@@ -46,9 +46,9 @@ public class UserService implements Utils {
                                     user.getPassword(),
                                     user.getSalt()
                             )
-                    )
-                    .setPhoneNumber(user.getPhoneNumber())
-                    .setDisplayName(user.getFirstName());
+                    );
+//                    .setPhoneNumber(user.getPhoneNumber())
+//                    .setDisplayName(user.getFirstName());
 
             //Firestore pw field encrypted
             user.setPassword(
