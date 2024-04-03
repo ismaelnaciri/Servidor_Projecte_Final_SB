@@ -1,23 +1,29 @@
 package cat.insvidreres.imp.m13projecte.service;
 
+import cat.insvidreres.imp.m13projecte.entities.GoogleLoginResponse;
 import cat.insvidreres.imp.m13projecte.entities.User;
 import cat.insvidreres.imp.m13projecte.utils.JSONResponse;
 import cat.insvidreres.imp.m13projecte.utils.Utils;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.Firestore;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseToken;
 import com.google.firebase.auth.UserRecord;
 import com.google.firebase.cloud.FirestoreClient;
 //import com.google.firestore.v1.WriteResult;
 import com.google.cloud.firestore.*;
+import com.google.gson.Gson;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -30,61 +36,108 @@ public class UserService implements Utils {
         ApiFuture<QuerySnapshot> collectionApiFuture = null;
 
         List<Object> dataToShow = new ArrayList<>();
+        AtomicReference<Boolean> errorEncrypting = new AtomicReference<>(false);
 
 
         try {
 
-            user.setSalt(generateRandomSalt());  //Generates salt and puts it in salt field
+            if (user.getPassword().contains(":")) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("password", user.getPassword());
 
-            //Auth fields
+                dataToShow.add(response);
+                return generateResponse(401,
+                        LocalDateTime.now().toString(),
+                        "':' is not allowed in the password",
+                        dataToShow);
+            }
+
             UserRecord.CreateRequest request = new UserRecord.CreateRequest()
                     .setEmail(user.getEmail())
                     .setUid(user.getEmail())
                     .setEmailVerified(false)
-                    .setPassword(                    //Hash + Salt
+                    .setPassword(
                             encryptPassword(
                                     user.getPassword(),
-                                    user.getSalt()
+                                    Utils.SALT
                             )
                     );
 //                    .setPhoneNumber(user.getPhoneNumber())
 //                    .setDisplayName(user.getFirstName());
 
-            //Firestore pw field encrypted
+
             user.setPassword(
                     encryptPassword(
                             user.getPassword(),
-                            user.getSalt()
+                            Utils.SALT
                     )
             );
 
-            UserRecord userExist = FirebaseAuth.getInstance().getUserByEmail(user.getEmail());
-
-            if (userExist == null) {
+            try {
                 UserRecord userRecord = FirebaseAuth.getInstance().createUser(request);
                 System.out.println("Successfully created new user: " + userRecord.getUid());
-            } else {
+            } catch (Exception e) {
                 return generateResponse(401,
                         LocalDate.now().toString(),
-                        "Error in creating user!",
+                        "Error in creating user!: " + e.getMessage(),
                         null);
             }
 
             collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", user.getEmail()).get();
 
-            if (collectionApiFuture.isDone()) {
+            if (collectionApiFuture.isDone() && !collectionApiFuture.get().isEmpty()) {
 
                 collectionApiFuture.get().forEach((doc) -> {
                     if (Objects.equals(doc.get("email"), user.getEmail())) {
                         dataToShow.add(user);
 
-                        dbFirestore.collection(CollectionName.USER.toString()).add(user);
+                        try {
+                            user.setPassword(
+                                    encryptPassword(
+                                            user.getPassword(),
+                                            Utils.SALT
+                                    )
+                            );
+
+                            updateUser(user);
+                        } catch (NoSuchAlgorithmException e) {
+                            errorEncrypting.set(true);
+                        }
                     }
                 });
+            } else {
+                try {
+                    user.setPassword(
+                            encryptPassword(
+                                    user.getPassword(),
+                                    Utils.SALT
+                            )
+                    );
+
+                    Map<String, Object> userToInsert = new HashMap<>();
+                    userToInsert.put("firstName", user.getFirstName());
+                    userToInsert.put("lastName", user.getLastName());
+                    userToInsert.put("age", user.getAge());
+                    userToInsert.put("password", user.getPassword());
+                    userToInsert.put("email", user.getEmail());
+                    userToInsert.put("phoneNumber", user.getPhoneNumber());
+
+                    dataToShow.add(userToInsert);
+                    dbFirestore.collection(CollectionName.USER.toString()).add(userToInsert);
+                } catch (NoSuchAlgorithmException e) {
+                    errorEncrypting.set(true);
+                }
+            }
+
+            if (errorEncrypting.get()) {
+                return generateResponse(500,
+                        LocalDateTime.now().toString(),
+                        "Error encrypting the password",
+                        dataToShow);
             }
 
             return generateResponse(200,
-                    LocalDate.now().toString(),
+                    LocalDateTime.now().toString(),
                     "Successfully created new user",
                     dataToShow);
 
@@ -92,7 +145,7 @@ public class UserService implements Utils {
             System.out.println("ERROR | " + e.getMessage());
 
             return generateResponse(500,
-                    LocalDate.now().toString(),
+                    LocalDateTime.now().toString(),
                     "ERROR WHILST CREATING USER",
                     null);
         }
@@ -118,14 +171,14 @@ public class UserService implements Utils {
             }
 
             return generateResponse(200,
-                    LocalDate.now().toString(),
+                    LocalDateTime.now().toString(),
                     "User deleted successfully!",
                     null);
         } catch (Exception e) {
             System.out.println("ERROR DELETING USER | " + e.getMessage());
 
             return generateResponse(500,
-                    LocalDate.now().toString(),
+                    LocalDateTime.now().toString(),
                     "ERROR whilst deleting user",
                     null);
         }
@@ -146,13 +199,43 @@ public class UserService implements Utils {
                     if (Objects.equals(doc.get("email"), user.getEmail())) {
                         dataToShow.add(user);
 
-                        dbFirestore.collection(CollectionName.USER.toString()).add(user);
+                        Map<String, Object> updates = new HashMap<>();
+
+                        if (!Objects.equals(doc.get("firstName"), user.getFirstName())) {
+                            updates.put("firstName", user.getFirstName());
+                        }
+
+                        if (!Objects.equals(doc.get("lastName"), user.getLastName())) {
+                            updates.put("lastName", user.getLastName());
+                        }
+
+                        if (!Objects.equals(doc.get("age"), user.getAge())) {
+                            updates.put("age", user.getAge());
+                        }
+
+                        if (doc.get("password") != null) {
+                            String fbPw = Objects.requireNonNull(doc.get("password")).toString();
+                            fbPw = decodePassword(fbPw);
+
+                            //Remove salt from pw
+                            fbPw = fbPw.split(":")[0];
+
+                            if (!Objects.equals(fbPw, user.getPassword())) {
+                                updates.put("password", user.getPassword());
+                            }
+                        }
+
+                        if (!Objects.equals(doc.get("email"), user.getEmail())) {
+                            updates.put("email", user.getEmail());
+                        }
+
+                        dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update(updates);
                     }
                 });
             }
 
             return generateResponse(200,
-                    LocalDate.now().toString(),
+                    LocalDateTime.now().toString(),
                     "User updated successfully!",
                     dataToShow
             );
@@ -160,7 +243,7 @@ public class UserService implements Utils {
             System.out.println("ERROR | " + e.getMessage());
 
             return generateResponse(500,
-                    LocalDate.now().toString(),
+                    LocalDateTime.now().toString(),
                     "ERROR WHILST UPDATING USER",
                     null);
         }
@@ -177,19 +260,24 @@ public class UserService implements Utils {
             if (collectionApiFuture.isDone()) {
                 collectionApiFuture.get().forEach((doc) -> {
                     if (Objects.equals(doc.get("email"), email)) {
-                        dataToShow.add(doc);
+
+                        String fbPw = Objects.requireNonNull(doc.get("password")).toString();
+                        fbPw = decodePassword(fbPw);
+                        User userToShow = doc.toObject(User.class);
+                        userToShow.setPassword(fbPw);
+                        dataToShow.add(userToShow);
                     }
                 });
             }
 
             return generateResponse(403,
-                    LocalDate.now().toString(),
+                    LocalDateTime.now().toString(),
                     "Wrong email. Check again.",
                     dataToShow);
 
         } catch (Exception e) {
             return generateResponse(500,
-                    LocalDate.now().toString(),
+                    LocalDateTime.now().toString(),
                     "Error in getting the user details. Please contact support for further infromation.",
                     null);
         }
@@ -209,7 +297,7 @@ public class UserService implements Utils {
             if (collectionApiFuture.isDone()) {
                 collectionApiFuture.get().forEach((doc) -> {
                     if (Objects.equals(doc.get("email"), email)) {
-                        String salt = (String) doc.get("salt");
+                        String salt = Utils.SALT;
 
                         try {
                             paramPW.set(encryptPassword(password, salt));
@@ -226,7 +314,7 @@ public class UserService implements Utils {
                             }
                         } catch (NoSuchAlgorithmException e) {
                             generateResponse(500,
-                                    LocalDate.now().toString(),
+                                    LocalDateTime.now().toString(),
                                     e.getMessage(),
                                     null);
                         }
@@ -234,21 +322,21 @@ public class UserService implements Utils {
                 });
 
                 return generateResponse(200,
-                        LocalDate.now().toString(),
+                        LocalDateTime.now().toString(),
                         "User gotten with hash correctly",
                         dataToShow);
 
             }
         } catch (Exception e) {
             return generateResponse(500,
-                    LocalDate.now().toString(),
+                    LocalDateTime.now().toString(),
                     e.getMessage(),
                     null);
         }
 
 
         return generateResponse(420,
-                LocalDate.now().toString(),
+                LocalDateTime.now().toString(),
                 "Thrown in saltHashGet, look into it",
                 null);
     }
@@ -273,22 +361,118 @@ public class UserService implements Utils {
                 }
 
                 return generateResponse(200,
-                        LocalDate.now().toString(),
+                        LocalDateTime.now().toString(),
                         "Users retreived correctly.",
                         dataToShow);
             }
         } catch (Exception e) {
 
             return generateResponse(500,
-                    LocalDate.now().toString(),
+                    LocalDateTime.now().toString(),
                     e.getMessage(),
                     null);
         }
 
         return generateResponse(500,
-                LocalDate.now().toString(),
+                LocalDateTime.now().toString(),
                 "ERROR ERROR ERROR",
                 null);
+    }
+
+    public JSONResponse login(User user) {
+        List<Object> dataToShow = new ArrayList<>();
+
+        try {
+            return signInWithEmailAndPassword(user);
+
+        } catch (Exception e) {
+            return generateResponse(
+                    500,
+                    LocalDateTime.now().toString(),
+                    e.getMessage(),
+                    null
+            );
+        }
+    }
+
+    public JSONResponse signInWithEmailAndPassword(User user) {
+        try {
+            List<Object> dataToShow = new ArrayList<>(); // Changed to List<String>
+            URL url = new URL("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyB6sjfyGU9KgP_olEaTYAJ6UmmbceWmgGs");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+
+            String encryptedPassword = encryptPassword(user.getPassword(), SALT);
+            user.setPassword(encryptedPassword);
+
+            Map<String, String> requestBody = new HashMap<>();
+            requestBody.put("email", user.getEmail());
+            requestBody.put("password", user.getPassword());
+            String jsonBody = new Gson().toJson(requestBody);
+
+            try (OutputStreamWriter writer = new OutputStreamWriter(conn.getOutputStream())) {
+                writer.write(jsonBody);
+                writer.flush();
+            }
+
+            int responseCode = conn.getResponseCode(); // Get response code
+            if (responseCode == HttpURLConnection.HTTP_OK) { // Check if response is OK
+                Gson gson = new Gson();
+                GoogleLoginResponse response = null;
+                List<String> temp = new ArrayList<>();
+
+                try (Scanner scanner = new Scanner(conn.getInputStream())) {
+                    while (scanner.hasNextLine()) {
+                        temp.add(scanner.nextLine());
+                    }
+                    String jsonResponse = String.join("\n", temp);
+                    response = gson.fromJson(jsonResponse, GoogleLoginResponse.class);
+                }
+
+                //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
+                //In client getCurrentUser id, if both have the same then proceed
+                try {
+                    FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(response.getIdToken());
+                    if (FirebaseAuth.getInstance().getUser(decodedToken.getUid()) != null) {
+                        dataToShow.add(response);
+
+                        return generateResponse(
+                                responseCode,
+                                LocalDateTime.now().toString(),
+                                "?wtf",
+                                dataToShow
+                        );
+                    }
+                } catch (Exception e) {
+                    System.out.println("Error sussy | " + e.getMessage());
+
+                    return generateResponse(
+                            401,
+                            LocalDateTime.now().toString(),
+                            e.getMessage(),
+                            null
+                    );
+                }
+
+            } else {
+                return generateResponse(
+                        responseCode,
+                        LocalDateTime.now().toString(),
+                        "Error: " + conn.getResponseMessage(),
+                        null
+                );
+            }
+        } catch (Exception e) {
+            return generateResponse(
+                    500,
+                    LocalDateTime.now().toString(),
+                    e.getMessage(),
+                    null
+            );
+        }
+        return null;
     }
 
 
