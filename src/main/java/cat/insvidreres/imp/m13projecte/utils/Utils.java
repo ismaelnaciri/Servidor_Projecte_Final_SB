@@ -11,6 +11,7 @@ import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.util.Base64;
+import java.util.List;
 
 public interface Utils {
 
@@ -31,6 +32,14 @@ public interface Utils {
         @Override
         public String toString() {
             return TEXT;
+        }
+    }
+
+    default JSONResponse generateResponse(int code, String date, String message, List<Object> data) {
+        if (data == null) {
+            return new JSONResponse(code, date, message);
+        } else {
+            return new JSONResponse(code, date, message, data);
         }
     }
 

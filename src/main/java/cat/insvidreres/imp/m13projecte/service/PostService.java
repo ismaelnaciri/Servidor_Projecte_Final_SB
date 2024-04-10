@@ -16,7 +16,6 @@ import java.util.concurrent.ExecutionException;
 public class PostService implements Utils {
 
 //    private static final String COLLECTION_NAME = "posts";
-//    private static final Firestore DB_FIRESTORE = FirestoreClient.getFirestore();
 //
 //
 //    public String savePost(Post post) throws InterruptedException, ExecutionException {

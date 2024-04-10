@@ -13,7 +13,9 @@ import java.util.concurrent.ExecutionException;
 
 @RestController
 @RequestMapping(path = "/api", produces = "application/json")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*",
+        methods = {RequestMethod.POST, RequestMethod.GET, RequestMethod.DELETE, RequestMethod.PUT},
+        allowedHeaders = "*")
 public class UserController {
 
     @Autowired
