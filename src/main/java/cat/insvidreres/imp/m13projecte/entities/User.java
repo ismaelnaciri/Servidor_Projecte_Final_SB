@@ -6,12 +6,12 @@ package cat.insvidreres.imp.m13projecte.entities;
 public class User {
 
     //For Spring Boot name of variables, getters and setters has to be the same that in firestore
-    private String id;
+    private String id = "";
     private String email;
     private String password;
     private String firstName;
-    private String lastName;
-    private int age;
+    private String lastName = "";
+    private int age = 0;
     private String phoneNumber;
 
     public String getId() {

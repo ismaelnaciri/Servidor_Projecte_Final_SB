@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @Service
 public class UserService implements Utils {
     private static final String COLLECTION_NAME = "users";
+    private static String currentToken = "";
 
     public JSONResponse saveUser(User user) throws InterruptedException, ExecutionException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
@@ -38,9 +39,7 @@ public class UserService implements Utils {
         List<Object> dataToShow = new ArrayList<>();
         AtomicReference<Boolean> errorEncrypting = new AtomicReference<>(false);
 
-
         try {
-
             if (user.getPassword().contains(":")) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("password", user.getPassword());
@@ -52,30 +51,41 @@ public class UserService implements Utils {
                         dataToShow);
             }
 
-            UserRecord.CreateRequest request = new UserRecord.CreateRequest()
-                    .setEmail(user.getEmail())
-                    .setUid(user.getEmail())
-                    .setEmailVerified(false)
-                    .setPassword(
-                            encryptPassword(
-                                    user.getPassword(),
-                                    Utils.SALT
-                            )
-                    )
-                    .setPhoneNumber(user.getPhoneNumber())
-                    .setDisplayName(user.getFirstName());
-
-
-            user.setPassword(
-                    encryptPassword(
-                            user.getPassword(),
-                            Utils.SALT
-                    )
-            );
+//            UserRecord.CreateRequest request = new UserRecord.CreateRequest();
+//
+//            if (user.getPhoneNumber() != null && user.getFirstName() != null) {
+//                request.setEmail(user.getEmail())
+//                        .setUid(user.getEmail())
+//                        .setEmailVerified(false)
+//                        .setPassword(user.getPassword())
+//                        .setPhoneNumber(!Objects.equals(user.getPhoneNumber(), "") ? user.getPhoneNumber() : "")
+//                        .setDisplayName(user.getFirstName());
+//            } else {
+//                request.setEmail(user.getEmail())
+//                        .setUid(user.getEmail())
+//                        .setEmailVerified(false)
+//                        .setPassword(
+//                                encryptPassword(
+//                                        user.getPassword(),
+//                                        Utils.SALT
+//                                )
+//                        );
+//            }
+//
+//            user.setPassword(
+//                    encryptPassword(
+//                            user.getPassword(),
+//                            Utils.SALT
+//                    )
+//            );
 
             try {
-                UserRecord userRecord = FirebaseAuth.getInstance().createUser(request);
-                System.out.println("Successfully created new user: " + userRecord.getUid());
+//                UserRecord userRecord = FirebaseAuth.getInstance().createUser(request);
+//                System.out.println("Successfully created new user: " + userRecord.getUid());
+
+                String userCustomToken = FirebaseAuth.getInstance().createCustomToken(user.getEmail());
+                dataToShow.add(userCustomToken);
+
             } catch (Exception e) {
                 return generateResponse(401,
                         LocalDate.now().toString(),
@@ -380,8 +390,6 @@ public class UserService implements Utils {
     }
 
     public JSONResponse login(User user) {
-        List<Object> dataToShow = new ArrayList<>();
-
         try {
             return signInWithEmailAndPassword(user);
 
@@ -396,16 +404,41 @@ public class UserService implements Utils {
     }
 
     public JSONResponse signInWithEmailAndPassword(User user) {
+        List<Object> dataToShow = new ArrayList<>();
         try {
-            List<Object> dataToShow = new ArrayList<>(); // Changed to List<String>
+//            UserRecord userAuth = FirebaseAuth.getInstance().getUser(user.getEmail());
+//
+//            if (userAuth == null) {
+//                return generateResponse(
+//                        401,
+//                        LocalDateTime.now().toString(),
+//                        "Wrong credentials.",
+//                        null
+//                );
+//            }
+//
+//
+//            String customUserToken = FirebaseAuth.getInstance().createCustomToken(user.getEmail());
+//            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(customUserToken);
+//            currentToken = customUserToken;
+//
+//            if (Objects.equals(userToken.getEmail(), user.getEmail())) {
+//                dataToShow.add(userToken);
+//                dataToShow.add(user);
+//                generateResponse(
+//                        200,
+//                        LocalDateTime.now().toString(),
+//                        "User logged in successfully!",
+//                        dataToShow
+//                );
+//            }
             URL url = new URL("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyB6sjfyGU9KgP_olEaTYAJ6UmmbceWmgGs");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json");
             conn.setDoOutput(true);
 
-            String encryptedPassword = encryptPassword(user.getPassword(), SALT);
-            user.setPassword(encryptedPassword);
+//            String encryptedPassword = encryptPassword(user.getPassword(), SALT);
 
             Map<String, String> requestBody = new HashMap<>();
             requestBody.put("email", user.getEmail());
@@ -422,6 +455,7 @@ public class UserService implements Utils {
                 Gson gson = new Gson();
                 GoogleLoginResponse response = null;
                 List<String> temp = new ArrayList<>();
+
 
                 try (Scanner scanner = new Scanner(conn.getInputStream())) {
                     while (scanner.hasNextLine()) {
@@ -457,6 +491,9 @@ public class UserService implements Utils {
                 }
 
             } else {
+
+                System.out.println("Error: |  " + conn.getResponseCode());
+                System.out.println("Error: |  " + conn.getResponseMessage());
                 return generateResponse(
                         responseCode,
                         LocalDateTime.now().toString(),

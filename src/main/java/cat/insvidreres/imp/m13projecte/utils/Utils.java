@@ -1,8 +1,10 @@
 package cat.insvidreres.imp.m13projecte.utils;
 
+import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -39,16 +41,19 @@ public interface Utils {
 
         byte[] result = md.digest(pwWithSalt.getBytes(StandardCharsets.UTF_8));
 
-        return Base64.getEncoder().encodeToString(result);
+        String encodedString = Base64.getEncoder().encodeToString(result);
+        return encodedString;
     }
 
-    default String testFirebaseHash(String password) {
+    default String testFirebaseHash(String password, String salt) {
         int rounds = 8;
         int mem_cost = 14;
 
+        String finalPassword = password + ":" + salt;
+
         try {
             byte[] saltBytes = Base64.getDecoder().decode(SALT);
-            KeySpec spec = new PBEKeySpec(password.toCharArray(), saltBytes, rounds, mem_cost);
+            KeySpec spec = new PBEKeySpec(finalPassword.toCharArray(), saltBytes, rounds, mem_cost);
             SecretKeyFactory factory = SecretKeyFactory.getInstance("SCRYPT");
             byte[] hash = factory.generateSecret(spec).getEncoded();
             return Base64.getEncoder().encodeToString(hash);
