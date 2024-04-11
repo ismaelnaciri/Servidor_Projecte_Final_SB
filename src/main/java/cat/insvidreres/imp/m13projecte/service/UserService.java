@@ -487,9 +487,9 @@ public class UserService implements Utils {
                 null);
     }
 
-    public JSONResponse login(User user) {
+    public JSONResponse login(String idToken) {
         try {
-            return signInWithEmailAndPassword(user);
+            return signInWithEmailAndPassword(idToken);
 
         } catch (Exception e) {
             return generateResponse(
@@ -501,12 +501,11 @@ public class UserService implements Utils {
         }
     }
 
-    public JSONResponse signInWithEmailAndPassword(User user) {
+    public JSONResponse signInWithEmailAndPassword(String idToken) {
         List<Object> dataToShow = new ArrayList<>();
         try {
-            UserRecord userAuth = FirebaseAuth.getInstance().getUser(user.getEmail());
 
-            if (userAuth == null) {
+            if (idToken == null || idToken.isEmpty()) {
                 return generateResponse(
                         401,
                         LocalDateTime.now().toString(),
@@ -515,15 +514,13 @@ public class UserService implements Utils {
                 );
             }
 
-            String customUserToken = FirebaseAuth.getInstance().createCustomToken(user.getEmail());
-            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(customUserToken);
-            currentToken = customUserToken;
+            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
 
             //TODO Change sign in to client side and send user token verify it with FirebaseAuth.getInstance().verifyToken()
             //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
-            if (Objects.equals(userToken.getEmail(), user.getEmail())) {
+            if (userToken != null) {
+                currentToken = idToken;
                 dataToShow.add(userToken);
-                dataToShow.add(user);
                 generateResponse(
                         200,
                         LocalDateTime.now().toString(),
