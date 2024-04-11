@@ -13,7 +13,9 @@ import java.util.concurrent.ExecutionException;
 
 @RestController
 @RequestMapping(path = "/api", produces = "application/json")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*",
+        methods = {RequestMethod.POST, RequestMethod.GET, RequestMethod.DELETE, RequestMethod.PUT},
+        allowedHeaders = "*")
 public class UserController {
 
     @Autowired
@@ -27,9 +29,9 @@ public class UserController {
     }
 
     @PostMapping("/users/login")
-    public JSONResponse userLogin(@RequestBody User user) throws ExecutionException, InterruptedException {
+    public JSONResponse userLogin(@RequestHeader("idToken") String idToken) throws ExecutionException, InterruptedException {
 
-        return userService.login(user);
+        return userService.login(idToken);
     }
 
     @GetMapping("/users")

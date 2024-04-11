@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @Service
 public class UserService implements Utils {
     private static final String COLLECTION_NAME = "users";
+    private static String currentToken = "";
 
     public JSONResponse saveUser(User user) throws InterruptedException, ExecutionException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
@@ -38,9 +39,7 @@ public class UserService implements Utils {
         List<Object> dataToShow = new ArrayList<>();
         AtomicReference<Boolean> errorEncrypting = new AtomicReference<>(false);
 
-
         try {
-
             if (user.getPassword().contains(":")) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("password", user.getPassword());
@@ -52,45 +51,147 @@ public class UserService implements Utils {
                         dataToShow);
             }
 
-            UserRecord.CreateRequest request = new UserRecord.CreateRequest()
-                    .setEmail(user.getEmail())
-                    .setUid(user.getEmail())
-                    .setEmailVerified(false)
-                    .setPassword(
-                            encryptPassword(
-                                    user.getPassword(),
-                                    Utils.SALT
-                            )
+            System.out.println("password  | " + user.getPassword() + "  |  email  |  " + user.getEmail());
+
+            String jwtToFirebase = JWTService.generateToken(user);
+
+            if (jwtToFirebase != null || jwtToFirebase != "") {
+
+                try {
+                    URL url = new URL("https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=AIzaSyB6sjfyGU9KgP_olEaTYAJ6UmmbceWmgGs");
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setRequestProperty("Content-Type", "application/json");
+                    conn.setDoOutput(true);
+
+//            String encryptedPassword = encryptPassword(user.getPassword(), SALT);
+                    Map<String, Object> requestBody = new HashMap<>();
+                    requestBody.put("email", user.getEmail());
+                    requestBody.put("password", user.getPassword());
+                    requestBody.put("displayName", user.getFirstName());
+//                    requestBody.put("idToken", jwtToFirebase);
+                    requestBody.put("emailVerified", false);
+                    requestBody.put("disabled", false);
+                    if (!Objects.equals(user.getPhoneNumber(), "")) {
+                        requestBody.put("phoneNumber", user.getPhoneNumber());
+                    }
+
+                    String jsonBody = new Gson().toJson(requestBody);
+
+                    try (OutputStreamWriter writer = new OutputStreamWriter(conn.getOutputStream())) {
+                        writer.write(jsonBody);
+                        writer.flush();
+                    }
+
+                    int responseCode = conn.getResponseCode(); // Get response code
+                    if (responseCode == HttpURLConnection.HTTP_OK) { // Check if response is OK
+                        Gson gson = new Gson();
+                        GoogleLoginResponse response = null;
+                        List<String> temp = new ArrayList<>();
+
+
+                        try (Scanner scanner = new Scanner(conn.getInputStream())) {
+                            while (scanner.hasNextLine()) {
+                                temp.add(scanner.nextLine());
+                            }
+                            String jsonResponse = String.join("\n", temp);
+                            response = gson.fromJson(jsonResponse, GoogleLoginResponse.class);
+                        }
+
+                        //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
+                        //In client getCurrentUser id, if both have the same then proceed
+                        try {
+                            FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(response.getIdToken());
+                            if (FirebaseAuth.getInstance().getUser(decodedToken.getUid()) != null) {
+                                dataToShow.add(response);
+                                currentToken = response.getIdToken();
+                                System.out.println("CURRENT TOKEN: " + currentToken);
+                                System.out.println("User created in Auth correctly !!");
+                            }
+                        } catch (Exception e) {
+                            System.out.println("Error sussy | " + e.getMessage());
+
+                            return generateResponse(
+                                    401,
+                                    LocalDateTime.now().toString(),
+                                    e.getMessage(),
+                                    null
+                            );
+                        }
+
+                    } else {
+
+                        System.out.println("Error: |  " + conn.getResponseCode());
+                        System.out.println("Error: |  " + conn.getResponseMessage());
+                        return generateResponse(
+                                responseCode,
+                                LocalDateTime.now().toString(),
+                                "Error: " + conn.getResponseMessage(),
+                                null
+                        );
+                    }
+                } catch (Exception e) {
+                    return generateResponse(
+                            500,
+                            LocalDateTime.now().toString(),
+                            e.getMessage(),
+                            null
                     );
-//                    .setPhoneNumber(user.getPhoneNumber())
-//                    .setDisplayName(user.getFirstName());
-
-
-            user.setPassword(
-                    encryptPassword(
-                            user.getPassword(),
-                            Utils.SALT
-                    )
-            );
-
-            try {
-                UserRecord userRecord = FirebaseAuth.getInstance().createUser(request);
-                System.out.println("Successfully created new user: " + userRecord.getUid());
-            } catch (Exception e) {
-                return generateResponse(401,
-                        LocalDate.now().toString(),
-                        "Error in creating user!: " + e.getMessage(),
-                        null);
+                }
             }
+
+//            UserRecord.CreateRequest request = new UserRecord.CreateRequest();
+//
+//            if (user.getPhoneNumber() != null && user.getFirstName() != null) {
+//                request.setEmail(user.getEmail())
+//                        .setUid(user.getEmail())
+//                        .setEmailVerified(false)
+//                        .setPassword(user.getPassword())
+//                        .setPhoneNumber(!Objects.equals(user.getPhoneNumber(), "") ? user.getPhoneNumber() : "")
+//                        .setDisplayName(user.getFirstName());
+//            } else {
+//                request.setEmail(user.getEmail())
+//                        .setUid(user.getEmail())
+//                        .setEmailVerified(false)
+//                        .setPassword(
+//                                encryptPassword(
+//                                        user.getPassword(),
+//                                        Utils.SALT
+//                                )
+//                        );
+//            }
+//
+//            user.setPassword(
+//                    encryptPassword(
+//                            user.getPassword(),
+//                            Utils.SALT
+//                    )
+//            );
+
+//            try {
+//                UserRecord userRecord = FirebaseAuth.getInstance().createUser(request);
+//                System.out.println("Successfully created new user: " + userRecord.getUid());
+//
+//                String userCustomToken = FirebaseAuth.getInstance().createCustomToken(user.getEmail());
+//                dataToShow.add(userCustomToken);
+//
+//            } catch (Exception e) {
+//                return generateResponse(401,
+//                        LocalDate.now().toString(),
+//                        "Error in creating user!: " + e.getMessage(),
+//                        null);
+//            }
 
             collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", user.getEmail()).get();
 
-            if (collectionApiFuture.isDone() && !collectionApiFuture.get().isEmpty()) {
+            System.out.println("FIRST STATEMENT | " + collectionApiFuture.isDone() + " |     SECOND STATEMENT   | " + !collectionApiFuture.get().isEmpty() + " |    THIRD STATEMENT   |  " + currentToken != null + " |");
+            if (collectionApiFuture.isDone() && !collectionApiFuture.get().isEmpty() && currentToken != null) {
 
                 collectionApiFuture.get().forEach((doc) -> {
                     if (Objects.equals(doc.get("email"), user.getEmail())) {
                         dataToShow.add(user);
 
+                        System.out.println("INSIDE email equals for each statement");
                         try {
                             user.setPassword(
                                     encryptPassword(
@@ -99,6 +200,7 @@ public class UserService implements Utils {
                                     )
                             );
 
+                            user.setId(currentToken);
                             updateUser(user);
                         } catch (NoSuchAlgorithmException e) {
                             errorEncrypting.set(true);
@@ -106,6 +208,9 @@ public class UserService implements Utils {
                     }
                 });
             } else {
+                System.out.println("INSIDE ELSE for each statement");
+
+
                 try {
                     user.setPassword(
                             encryptPassword(
@@ -114,8 +219,11 @@ public class UserService implements Utils {
                             )
                     );
 
+                    user.setId(currentToken);
+
                     Map<String, Object> userToInsert = new HashMap<>();
                     userToInsert.put("firstName", user.getFirstName());
+                    userToInsert.put("id", user.getId());
                     userToInsert.put("lastName", user.getLastName());
                     userToInsert.put("age", user.getAge());
                     userToInsert.put("password", user.getPassword());
@@ -379,11 +487,9 @@ public class UserService implements Utils {
                 null);
     }
 
-    public JSONResponse login(User user) {
-        List<Object> dataToShow = new ArrayList<>();
-
+    public JSONResponse login(String idToken) {
         try {
-            return signInWithEmailAndPassword(user);
+            return signInWithEmailAndPassword(idToken);
 
         } catch (Exception e) {
             return generateResponse(
@@ -395,73 +501,31 @@ public class UserService implements Utils {
         }
     }
 
-    public JSONResponse signInWithEmailAndPassword(User user) {
+    public JSONResponse signInWithEmailAndPassword(String idToken) {
+        List<Object> dataToShow = new ArrayList<>();
         try {
-            List<Object> dataToShow = new ArrayList<>(); // Changed to List<String>
-            URL url = new URL("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyB6sjfyGU9KgP_olEaTYAJ6UmmbceWmgGs");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
 
-            String encryptedPassword = encryptPassword(user.getPassword(), SALT);
-            user.setPassword(encryptedPassword);
-
-            Map<String, String> requestBody = new HashMap<>();
-            requestBody.put("email", user.getEmail());
-            requestBody.put("password", user.getPassword());
-            String jsonBody = new Gson().toJson(requestBody);
-
-            try (OutputStreamWriter writer = new OutputStreamWriter(conn.getOutputStream())) {
-                writer.write(jsonBody);
-                writer.flush();
+            if (idToken == null || idToken.isEmpty()) {
+                return generateResponse(
+                        401,
+                        LocalDateTime.now().toString(),
+                        "Wrong credentials.",
+                        null
+                );
             }
 
-            int responseCode = conn.getResponseCode(); // Get response code
-            if (responseCode == HttpURLConnection.HTTP_OK) { // Check if response is OK
-                Gson gson = new Gson();
-                GoogleLoginResponse response = null;
-                List<String> temp = new ArrayList<>();
+            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
 
-                try (Scanner scanner = new Scanner(conn.getInputStream())) {
-                    while (scanner.hasNextLine()) {
-                        temp.add(scanner.nextLine());
-                    }
-                    String jsonResponse = String.join("\n", temp);
-                    response = gson.fromJson(jsonResponse, GoogleLoginResponse.class);
-                }
-
-                //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
-                //In client getCurrentUser id, if both have the same then proceed
-                try {
-                    FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(response.getIdToken());
-                    if (FirebaseAuth.getInstance().getUser(decodedToken.getUid()) != null) {
-                        dataToShow.add(response);
-
-                        return generateResponse(
-                                responseCode,
-                                LocalDateTime.now().toString(),
-                                "?wtf",
-                                dataToShow
-                        );
-                    }
-                } catch (Exception e) {
-                    System.out.println("Error sussy | " + e.getMessage());
-
-                    return generateResponse(
-                            401,
-                            LocalDateTime.now().toString(),
-                            e.getMessage(),
-                            null
-                    );
-                }
-
-            } else {
-                return generateResponse(
-                        responseCode,
+            //TODO Change sign in to client side and send user token verify it with FirebaseAuth.getInstance().verifyToken()
+            //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
+            if (userToken != null) {
+                currentToken = idToken;
+                dataToShow.add(userToken);
+                generateResponse(
+                        200,
                         LocalDateTime.now().toString(),
-                        "Error: " + conn.getResponseMessage(),
-                        null
+                        "User logged in successfully!",
+                        dataToShow
                 );
             }
         } catch (Exception e) {
@@ -475,12 +539,4 @@ public class UserService implements Utils {
         return null;
     }
 
-
-    public JSONResponse generateResponse(int code, String date, String message, List<Object> data) {
-        if (data == null) {
-            return new JSONResponse(code, date, message);
-        } else {
-            return new JSONResponse(code, date, message, data);
-        }
-    }
 }
