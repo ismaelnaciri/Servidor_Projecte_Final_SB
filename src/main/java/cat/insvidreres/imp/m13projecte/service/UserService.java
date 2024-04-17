@@ -182,6 +182,7 @@ public class UserService implements Utils {
                     userToInsert.put("password", user.getPassword());
                     userToInsert.put("email", user.getEmail());
                     userToInsert.put("phoneNumber", user.getPhoneNumber());
+                    userToInsert.put("img", user.getImg());
 
                     dataToShow.add(userToInsert);
                     dbFirestore.collection(CollectionName.USER.toString()).add(userToInsert);
