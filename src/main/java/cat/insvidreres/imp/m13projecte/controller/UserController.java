@@ -47,8 +47,8 @@ public class UserController {
 //    }
 
 
-    @GetMapping("/user/{email}")
-    public JSONResponse getUser(@PathVariable String email, @RequestHeader("idToken") String idToken) throws ExecutionException, InterruptedException {
+    @GetMapping("/user")
+    public JSONResponse getUser(@RequestParam String email, @RequestHeader("idToken") String idToken) throws ExecutionException, InterruptedException {
 
         return userService.getUserDetails(email, idToken);
     }
