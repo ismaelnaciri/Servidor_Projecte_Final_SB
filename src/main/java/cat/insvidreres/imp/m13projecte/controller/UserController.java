@@ -48,9 +48,9 @@ public class UserController {
 
 
     @GetMapping("/user/{email}")
-    public JSONResponse getUser(@PathVariable String email) throws ExecutionException, InterruptedException {
+    public JSONResponse getUser(@PathVariable String email, @RequestHeader("idToken") String idToken) throws ExecutionException, InterruptedException {
 
-        return userService.getUserDetails(email);
+        return userService.getUserDetails(email, idToken);
     }
 
     //Change to "/user/{firstName}"

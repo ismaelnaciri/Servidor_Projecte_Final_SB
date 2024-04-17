@@ -357,7 +357,7 @@ public class UserService implements Utils {
         }
     }
 
-    public JSONResponse getUserDetails(String email) throws ExecutionException, InterruptedException {
+    public JSONResponse getUserDetails(String email, String idToken) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         ApiFuture<QuerySnapshot> collectionApiFuture = null;
         List<Object> dataToShow = new ArrayList<>();
@@ -376,12 +376,26 @@ public class UserService implements Utils {
                         dataToShow.add(userToShow);
                     }
                 });
+
+                FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+
+                //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
+                if (userToken != null) {
+                    dataToShow.add(userToken);
+                    return generateResponse(
+                            200,
+                            LocalDateTime.now().toString(),
+                            "User logged in successfully!",
+                            dataToShow
+                    );
+                }
             }
 
             return generateResponse(403,
                     LocalDateTime.now().toString(),
                     "Wrong email. Check again.",
-                    dataToShow);
+                    null
+            );
 
         } catch (Exception e) {
             return generateResponse(500,
@@ -517,7 +531,6 @@ public class UserService implements Utils {
             System.out.println("TOKEN   |  " + idToken);
             FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
 
-            //TODO Change sign in to client side and send user token verify it with FirebaseAuth.getInstance().verifyToken()
             //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
             if (userToken != null) {
                 currentToken = idToken;
