@@ -514,6 +514,7 @@ public class UserService implements Utils {
                 );
             }
 
+            System.out.println("TOKEN   |  " + idToken);
             FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
 
             //TODO Change sign in to client side and send user token verify it with FirebaseAuth.getInstance().verifyToken()
@@ -521,11 +522,18 @@ public class UserService implements Utils {
             if (userToken != null) {
                 currentToken = idToken;
                 dataToShow.add(userToken);
-                generateResponse(
+                return generateResponse(
                         200,
                         LocalDateTime.now().toString(),
                         "User logged in successfully!",
                         dataToShow
+                );
+            } else {
+                return generateResponse(
+                        404,
+                        LocalDateTime.now().toString(),
+                        "Error getting user token ",
+                        null
                 );
             }
         } catch (Exception e) {
@@ -536,7 +544,6 @@ public class UserService implements Utils {
                     null
             );
         }
-        return null;
     }
 
 }
