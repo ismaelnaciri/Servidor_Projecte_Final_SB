@@ -35,9 +35,9 @@ public class UserController {
     }
 
     @GetMapping("/users")
-    public JSONResponse getAllUsers() throws ExecutionException, InterruptedException {
+    public JSONResponse getAllUsers(@RequestHeader("idToken") String idToken) throws ExecutionException, InterruptedException {
 
-        return userService.getUsers();
+        return userService.getUsers(idToken);
     }
 
 //    @GetMapping("/test/user/{email}/{password}")
@@ -55,14 +55,14 @@ public class UserController {
 
     //Change to "/user/{firstName}"
     @PutMapping("/users")
-    public JSONResponse updateUser(@RequestBody User user) throws ExecutionException, InterruptedException {
+    public JSONResponse updateUser(@RequestBody User user, @RequestHeader("idToken") String idToken) throws ExecutionException, InterruptedException {
 
-        return userService.updateUser(user);
+        return userService.updateUser(user, idToken);
     }
 
     @DeleteMapping("/users")
-    public JSONResponse deleteUser(@RequestBody String email) throws ExecutionException, InterruptedException {
+    public JSONResponse deleteUser(@RequestBody String email, @RequestHeader("idToken") String idToken) throws ExecutionException, InterruptedException {
 
-        return userService.deleteUser(email);
+        return userService.deleteUser(email, idToken);
     }
 }

@@ -201,7 +201,7 @@ public class UserService implements Utils {
                             );
 
                             user.setId(currentToken);
-                            updateUser(user);
+                            updateUser(user, currentToken);
                         } catch (NoSuchAlgorithmException e) {
                             errorEncrypting.set(true);
                         }
@@ -260,9 +260,10 @@ public class UserService implements Utils {
 
     }
 
-    public JSONResponse deleteUser(String email) throws InterruptedException, ExecutionException {
+    public JSONResponse deleteUser(String email, String idToken) throws InterruptedException, ExecutionException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         ApiFuture<QuerySnapshot> collectionApiFuture = null;
+        List<Object> dataToShow = new ArrayList<>();
 
         try {
 
@@ -278,10 +279,25 @@ public class UserService implements Utils {
                 });
             }
 
-            return generateResponse(200,
-                    LocalDateTime.now().toString(),
-                    "User deleted successfully!",
-                    null);
+            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+
+            if (userToken != null) {
+                dataToShow.add(userToken);
+                return generateResponse(
+                        200,
+                        LocalDateTime.now().toString(),
+                        "User deleted successfully!",
+                        dataToShow
+                );
+            } else {
+                return generateResponse(
+                        404,
+                        LocalDateTime.now().toString(),
+                        "User token not found!",
+                        null
+                );
+            }
+
         } catch (Exception e) {
             System.out.println("ERROR DELETING USER | " + e.getMessage());
 
@@ -292,7 +308,7 @@ public class UserService implements Utils {
         }
     }
 
-    public JSONResponse updateUser(User user) {
+    public JSONResponse updateUser(User user, String idToken) {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         ApiFuture<QuerySnapshot> collectionApiFuture = null;
         List<Object> dataToShow = new ArrayList<>();
@@ -340,14 +356,36 @@ public class UserService implements Utils {
                         dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update(updates);
                     }
                 });
+                FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+
+                //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
+                if (userToken != null) {
+                    dataToShow.add(userToken);
+                    return generateResponse(
+                            200,
+                            LocalDateTime.now().toString(),
+                            "User logged in successfully!",
+                            dataToShow
+                    );
+                } else {
+                    return generateResponse(
+                            404,
+                            LocalDateTime.now().toString(),
+                            "User token not found!",
+                            null
+                    );
+                }
+
+            } else {
+                return generateResponse(
+                        404,
+                        LocalDateTime.now().toString(),
+                        "User token not found!",
+                        null
+                );
             }
 
-            return generateResponse(200,
-                    LocalDateTime.now().toString(),
-                    "User updated successfully!",
-                    dataToShow
-            );
-        } catch (ExecutionException | InterruptedException e) {
+        } catch (Exception e) {
             System.out.println("ERROR | " + e.getMessage());
 
             return generateResponse(500,
@@ -463,7 +501,7 @@ public class UserService implements Utils {
                 null);
     }
 
-    public JSONResponse getUsers() throws ExecutionException, InterruptedException {
+    public JSONResponse getUsers(String idToken) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         List<Object> dataToShow = new ArrayList<>();
 
@@ -481,11 +519,24 @@ public class UserService implements Utils {
                     User user = doc.toObject(User.class);
                     dataToShow.add(user);
                 }
+                FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
 
-                return generateResponse(200,
-                        LocalDateTime.now().toString(),
-                        "Users retreived correctly.",
-                        dataToShow);
+                //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
+                if (userToken != null) {
+                    dataToShow.add(userToken);
+                    return generateResponse(200,
+                            LocalDateTime.now().toString(),
+                            "Users retreived correctly.",
+                            dataToShow);
+                } else {
+                    return generateResponse(
+                            403,
+                            LocalDateTime.now().toString(),
+                            "Error verifying user Token",
+                            null
+                    );
+                }
+
             }
         } catch (Exception e) {
 
