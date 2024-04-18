@@ -7,6 +7,7 @@ import cat.insvidreres.imp.m13projecte.entities.Post;
 import cat.insvidreres.imp.m13projecte.utils.JSONResponse;
 import cat.insvidreres.imp.m13projecte.utils.Utils;
 
+import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseToken;
@@ -65,55 +66,49 @@ public class PostService implements Utils {
             return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE CREATING POST", null);
         }
     }
+
+    public JSONResponse getAllPosts(String idToken) {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        List<Object> dataToShow = new ArrayList<>();
+
+        try {
+            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+            if (userToken == null) {
+                return generateResponse(
+                        404,
+                        LocalDateTime.now().toString(),
+                        "User token not found!",
+                        null
+                );
+            }
+
+            CollectionReference postsRef = dbFirestore.collection("posts");
+            ApiFuture<QuerySnapshot> future = postsRef.get();
+            QuerySnapshot querySnapshot = future.get();
+
+            for (QueryDocumentSnapshot document : querySnapshot.getDocuments()) {
+                Map<String, Object> postData = document.getData();
+
+                String id = (String) postData.get("id");
+                String email = (String) postData.get("email");
+                String createdAT = (String) postData.get("createdAT");
+                String description = (String) postData.get("description");
+                String[] images = ((List<String>) postData.get("images")).toArray(new String[0]);
+                String[] category = ((List<String>) postData.get("category")).toArray(new String[0]);
+                String[] likes = ((List<String>) postData.get("likes")).toArray(new String[0]);
+
+                Post post = new Post(id, email, createdAT, description, images, category, likes, null);
+                dataToShow.add(post);
+            }
+
+            return generateResponse(200, LocalDateTime.now().toString(), "Posts retrieved", dataToShow);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE RETRIEVING POSTS", null);
+        }
+    }
 }
 
 
 
 
-//    private static final String COLLECTION_NAME = "posts";
-//
-//
-//    public String savePost(Post post) throws InterruptedException, ExecutionException {
-//        ApiFuture<WriteResult> collectionApiFuture = null;
-//
-//        try {
-//            collectionApiFuture = DB_FIRESTORE.collection(CollectionName.POST.toString()).document(post.getDocName()).set(post);
-//
-//            return collectionApiFuture.get().getUpdateTime().toString();
-//        } catch (Exception e) {
-//            System.out.println("ERROR | " + e.getMessage());
-//            e.printStackTrace();
-//
-//            return "Error whilst saving post";
-//        }
-//    }
-//
-//    public String deletePost(String docName) throws InterruptedException, ExecutionException {
-//        ApiFuture<WriteResult> collectionApiFuture = null;
-//
-//        try {
-//            collectionApiFuture = DB_FIRESTORE.collection(CollectionName.POST.toString()).document(docName).delete();
-//
-//            return collectionApiFuture.get().getUpdateTime().toString();
-//        } catch (Exception e ) {
-//            System.out.println("ERROR DELETING POST | " + e.getMessage());
-//            e.printStackTrace();
-//
-//            return "Error whilst deleting post";
-//        }
-//    }
-//
-//    public String updateUser(Post post) {
-//        ApiFuture<WriteResult> collectionApiFuture = null;
-//
-//        try {
-//            collectionApiFuture = DB_FIRESTORE.collection(CollectionName.POST.toString()).document(post.getDocName()).set(post);
-//
-//            return collectionApiFuture.get().getUpdateTime().toString();
-//        } catch (ExecutionException | InterruptedException e) {
-//            System.out.println("ERROR | " + e.getMessage());
-//            e.printStackTrace();
-//
-//            return "Error whilst updating post";
-//        }
-//    }

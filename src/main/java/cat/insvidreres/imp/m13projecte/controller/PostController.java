@@ -23,4 +23,18 @@ public class PostController {
 
         return postService.createPost(post, idToken);
     }
+
+    @GetMapping("/allposts")
+    public JSONResponse getAllPosts(@RequestHeader("idToken") String idToken) throws ExecutionException, InterruptedException {
+
+        return postService.getAllPosts(idToken);
+    }
+
+
+
+
+
+
+
+
 }
