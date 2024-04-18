@@ -14,24 +14,24 @@ import java.io.IOException;
 @Service
 public class FirebaseInitialization {
 
-    @PostConstruct
-    public void initialization() throws IOException {
-        FileInputStream serviceAccount = null;
-
-        try {
-            serviceAccount = new FileInputStream(
-                    "C:\\Users\\Pau Casas\\IdeaProjects\\Servidor_Projecte_Final_SB\\src\\main\\resources\\serviceAccount.json");
-
-            FirebaseOptions options = FirebaseOptions.builder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                    .build();
-
-
-            FirebaseApp.initializeApp(options);
-
-        } catch (Exception e) {
-            System.out.println("ERROR | " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
+//    @PostConstruct
+//    public void initialization() throws IOException {
+//        FileInputStream serviceAccount = null;
+//
+//        try {
+//            serviceAccount = new FileInputStream(
+//                    "C:\\Users\\Pau Casas\\IdeaProjects\\Servidor_Projecte_Final_SB\\src\\main\\resources\\serviceAccount.json");
+//
+//            FirebaseOptions options = FirebaseOptions.builder()
+//                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+//                    .build();
+//
+//
+//            FirebaseApp.initializeApp(options);
+//
+//        } catch (Exception e) {
+//            System.out.println("ERROR | " + e.getMessage());
+//            e.printStackTrace();
+//        }
+//    }
 }

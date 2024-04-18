@@ -2,36 +2,47 @@ package cat.insvidreres.imp.m13projecte.entities;
 
 public class Comment {
 
-    private CommentInstance[] comments;
+    private String email;
+    private String comment;
+    private String commentAt;
+    private String[] likes;
 
-    static class CommentInstance {
-        private String docName;
-        private String userId;
-        private String comment;
-
-        public String getDocName() {
-            return docName;
-        }
-
-        public void setDocName(String docName) {
-            this.docName = docName;
-        }
-
-        public String getComment() {
-            return comment;
-        }
-
-        public void setComment(String comment) {
-            this.comment = comment;
-        }
-
-        public String getUserId() {
-            return userId;
-        }
-
-        public void setUserId(String userId) {
-            this.userId = userId;
-        }
+    public Comment(String email, String comment, String commentAt, String[] likes) {
+        this.email = email;
+        this.comment = comment;
+        this.commentAt = commentAt;
+        this.likes = likes;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
+    }
+
+    public String getCommentAt() {
+        return commentAt;
+    }
+
+    public void setCommentAt(String commentAt) {
+        this.commentAt = commentAt;
+    }
+
+    public String[] getLikes() {
+        return likes;
+    }
+
+    public void setLikes(String[] likes) {
+        this.likes = likes;
+    }
 }
