@@ -15,6 +15,21 @@ public class User {
     private String phoneNumber;
     private String img = "https://firebasestorage.googleapis.com/v0/b/social-post-m13.appspot.com/o/placeholder_pfp.jpg?alt=media&token=4cf013bf-1afd-4c5a-8a4e-7248b5016feb";
 
+    public User() {
+
+    }
+
+    public User(String id, String email, String password, String firstName, String lastName, int age, String phoneNumber, String img) {
+        this.id = id;
+        this.email = email;
+        this.password = password;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.age = age;
+        this.phoneNumber = phoneNumber;
+        this.img = img;
+    }
+
     public String getId() {
         return id;
     }

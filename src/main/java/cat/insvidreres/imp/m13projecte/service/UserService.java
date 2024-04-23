@@ -356,7 +356,11 @@ public class UserService implements Utils {
         List<Object> dataToShow = new ArrayList<>();
 
         System.out.println("Email: " + email);
+
+
         try {
+            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+
             collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
 
 //            if (collectionApiFuture.isDone()) {
@@ -373,27 +377,24 @@ public class UserService implements Utils {
 
             System.out.println("bugnjefbngvljsf");
 
-            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
 
             //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
             if (userToken != null) {
                 System.out.println("Adentro");
 
-                dataToShow.add(userToken);
                 return generateResponse(
                         200,
                         LocalDateTime.now().toString(),
                         "User data gotten successfully!",
                         dataToShow
                 );
+            } else {
+                return generateResponse(403,
+                        LocalDateTime.now().toString(),
+                        "Wrong email. Check again.",
+                        null
+                );
             }
-//            }
-
-            return generateResponse(403,
-                    LocalDateTime.now().toString(),
-                    "Wrong email. Check again.",
-                    null
-            );
 
         } catch (Exception e) {
             return generateResponse(500,
