@@ -367,10 +367,8 @@ public class UserService implements Utils {
             collectionApiFuture.get().forEach((doc) -> {
                 if (Objects.equals(doc.get("email"), email)) {
 
-//                        String fbPw = Objects.requireNonNull(doc.get("password")).toString();
-//                        fbPw = decodePassword(fbPw);
                     User userToShow = doc.toObject(User.class);
-//                        userToShow.setPassword(fbPw);
+                    System.out.println("User | " + userToShow);
                     dataToShow.add(userToShow);
                 }
             });

@@ -2,6 +2,9 @@ package cat.insvidreres.imp.m13projecte.entities;
 
 //import org.springframework.cloud.gcp.data.firestore.Document;
 
+import java.util.ArrayList;
+import java.util.List;
+
 //@Document(collectionName = "users")
 public class User {
 
@@ -14,12 +17,13 @@ public class User {
     private int age = 0;
     private String phoneNumber;
     private String img = "https://firebasestorage.googleapis.com/v0/b/social-post-m13.appspot.com/o/placeholder_pfp.jpg?alt=media&token=4cf013bf-1afd-4c5a-8a4e-7248b5016feb";
+    private List<User> friends;
 
     public User() {
 
     }
 
-    public User(String id, String email, String password, String firstName, String lastName, int age, String phoneNumber, String img) {
+    public User(String id, String email, String password, String firstName, String lastName, int age, String phoneNumber, String img, List<User> friends) {
         this.id = id;
         this.email = email;
         this.password = password;
@@ -28,6 +32,7 @@ public class User {
         this.age = age;
         this.phoneNumber = phoneNumber;
         this.img = img;
+        this.friends = friends;
     }
 
     public String getId() {
@@ -92,5 +97,13 @@ public class User {
 
     public void setImg(String img) {
         this.img = img;
+    }
+
+    public List<User> getFriends() {
+        return friends;
+    }
+
+    public void setFriends(List<User> friends) {
+        this.friends = friends;
     }
 }
