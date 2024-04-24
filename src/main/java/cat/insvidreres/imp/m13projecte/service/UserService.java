@@ -373,7 +373,6 @@ public class UserService implements Utils {
                 }
             });
 
-            System.out.println("bugnjefbngvljsf");
 
 
             //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java

@@ -213,20 +213,44 @@ public class PostService implements Utils {
 
         try {
             //Deconcatenate the string
+            System.out.println("HIIII?");
             List<String> categoriesArr = List.of(categories.split(","));
-            Collections.sort(categoriesArr);
+
+            System.out.println("categories received | " + categoriesArr);
 
             future = dbFirestore.collection(CollectionName.POST.toString()).get();
 
             future.get().forEach((doc) -> {
                 List<String> postCategories = (List<String>) doc.getData().get("categories");
 
+                System.out.println("postCategories received | " + postCategories);
                 categoriesArr.forEach((item) -> {
-                    if (postCategories.contains(item)) {
-                        Post post = doc.toObject(Post.class);
-                        dataToShow.add(post);
-                        dataToShow.add(post);
-                    }
+
+                    for (String category : postCategories) {
+                        System.out.println("item | " + item + " | category | " + category);
+                        if (category.trim().equals(item.trim())) {
+                            System.out.println("inside" + item);
+                            Post post = doc.toObject(Post.class);
+                            String postIdFirebase = (String) doc.getData().get("id");
+
+                            if (dataToShow.isEmpty()) {
+                                dataToShow.add(post);
+                            } else {
+                                dataToShow.forEach((postInDataToShow) -> {
+                                    if (postInDataToShow instanceof Post) {
+                                        if (!((Post) postInDataToShow).getId().equals(postIdFirebase)) {
+                                            dataToShow.add(post);
+                                        }
+                                    }
+                                });
+                            }
+//                            if (!dataToShow.contains(post)) {
+//                                System.out.println("dataToshow | " + dataToShow);
+//                                System.out.println("current post | " + post);
+//                                dataToShow.add(post);
+//                            }
+                        }
+                    };
                 });
             });
 
@@ -242,7 +266,7 @@ public class PostService implements Utils {
             return generateResponse(
                     404,
                     LocalDateTime.now().toString(),
-                    "No posts found with those categories",
+                    "No posts found with those categories | " + e.getMessage(),
                     null
             );
         }
