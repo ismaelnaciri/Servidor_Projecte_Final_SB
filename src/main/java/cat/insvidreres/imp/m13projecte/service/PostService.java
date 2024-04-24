@@ -537,6 +537,49 @@ public class PostService implements Utils {
             return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE ADDING LIKE | " + e.getMessage(), null);
         }
     }
+
+    public JSONResponse getCategories(String idToken) {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        List<Object> dataToShow = new ArrayList<>();
+
+        try {
+            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+            if (userToken == null) {
+                return generateResponse(
+                        401,
+                        LocalDateTime.now().toString(),
+                        "User token not found!",
+                        null
+                );
+            }
+
+            DocumentReference typeDocRef = dbFirestore.collection("categories").document("Type");
+            ApiFuture<DocumentSnapshot> typeDocFuture = typeDocRef.get();
+            DocumentSnapshot typeDocSnapshot = typeDocFuture.get();
+
+            if (typeDocSnapshot.exists() && typeDocSnapshot.contains("categories")) {
+                List<String> categories = (List<String>) typeDocSnapshot.get("categories");
+
+                dataToShow.addAll(categories);
+            } else {
+                return generateResponse(
+                        404,
+                        LocalDateTime.now().toString(),
+                        "Categories not found!",
+                        null
+                );
+            }
+
+
+            return generateResponse(200, LocalDateTime.now().toString(), "Posts retrieved", dataToShow);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE RETRIEVING POSTS", null);
+        }
+    }
+
+
+
 }
 
 

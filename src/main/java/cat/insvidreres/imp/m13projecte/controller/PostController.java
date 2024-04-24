@@ -75,4 +75,9 @@ public class PostController {
         return postService.deleteLikeCommentPost( idToken, idPost, idComment, email);
     }
 
+    @GetMapping("/categories")
+    public JSONResponse getCategories(@RequestHeader("idToken") String idToken) throws ExecutionException, InterruptedException {
+        return postService.getCategories(idToken);
+    }
+
 }
