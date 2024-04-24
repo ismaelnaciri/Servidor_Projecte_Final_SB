@@ -1,6 +1,7 @@
 package cat.insvidreres.imp.m13projecte.controller;
 
 
+import cat.insvidreres.imp.m13projecte.entities.Comment;
 import cat.insvidreres.imp.m13projecte.entities.Post;
 import cat.insvidreres.imp.m13projecte.service.PostService;
 import cat.insvidreres.imp.m13projecte.utils.JSONResponse;
@@ -44,8 +45,34 @@ public class PostController {
         return postService.getUserPosts(idToken, email);
     }
 
+    @PostMapping("/postcomment")
+    public JSONResponse addPostComment(@RequestBody Comment comment,  @RequestHeader("idToken") String idToken, @RequestParam ("idPost") String idPost)  throws ExecutionException, InterruptedException {
 
+        return postService.addCommentPost(comment, idToken, idPost);
+    }
 
+    @PostMapping("/addLikePost")
+    public JSONResponse addLikePost(  @RequestHeader("idToken") String idToken, @RequestParam ("idPost") String idPost, @RequestBody String email)  throws ExecutionException, InterruptedException {
 
+        return postService.addLikePost(idToken, idPost, email);
+    }
+
+    @PostMapping("/deleteLikePost")
+    public JSONResponse deleteLikePost( @RequestHeader("idToken") String idToken, @RequestParam ("idPost") String idPost, @RequestBody String email)  throws ExecutionException, InterruptedException {
+
+        return postService.deleteLikePost( idToken, idPost,email);
+    }
+
+    @PostMapping("/addLikePostComment")
+    public JSONResponse addLikeComment(  @RequestHeader("idToken") String idToken, @RequestParam ("idPost") String idPost, @RequestParam ("idComment") String idComment, @RequestBody String email)  throws ExecutionException, InterruptedException {
+
+        return postService.addLikeCommentPost(idToken, idPost, idComment, email);
+    }
+
+    @PostMapping("/deleteLikePostComment")
+    public JSONResponse deleteLikeComment( @RequestHeader("idToken") String idToken, @RequestParam ("idPost") String idPost, @RequestParam ("idComment") String idComment, @RequestBody String email)  throws ExecutionException, InterruptedException {
+
+        return postService.deleteLikeCommentPost( idToken, idPost, idComment, email);
+    }
 
 }

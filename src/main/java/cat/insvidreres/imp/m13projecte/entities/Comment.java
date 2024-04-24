@@ -9,15 +9,22 @@ public class Comment {
     private String commentAt;
     private List<String> likes;
 
-    public Comment() {
+    private String id;
 
-    }
-
-    public Comment(String email, String comment, String commentAt, List<String> likes) {
+    public Comment(String email, String comment, String commentAt, List<String> likes, String id) {
         this.email = email;
         this.comment = comment;
         this.commentAt = commentAt;
         this.likes = likes;
+        this.id = id;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getEmail() {
