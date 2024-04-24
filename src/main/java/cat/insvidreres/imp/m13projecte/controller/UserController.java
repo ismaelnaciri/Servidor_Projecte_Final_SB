@@ -40,6 +40,12 @@ public class UserController {
         return userService.getUsers(idToken);
     }
 
+    @GetMapping("/user/friends")
+    public JSONResponse getUserFriends(@RequestHeader("idToken") String idToken, @RequestParam String email) throws ExecutionException, InterruptedException {
+
+        return userService.getUserDetails(email, idToken);
+    }
+
 //    @GetMapping("/test/user/{email}/{password}")
 //    public JSONResponse getUserWithHash(@PathVariable String email, @PathVariable String password) throws ExecutionException, InterruptedException, NoSuchAlgorithmException {
 //

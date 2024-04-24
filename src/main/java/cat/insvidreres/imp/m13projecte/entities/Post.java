@@ -1,23 +1,28 @@
 package cat.insvidreres.imp.m13projecte.entities;
 
+import java.util.List;
+
 public class Post {
 
     private String id;
     private String email;
     private String createdAT;
     private String description;
-    private String[] images;
-    private String[] category;
-    private String[] likes;
-    private Comment[] comments;
+    private List<String> images;
+    private List<String> categories;
+    private List<String> likes;
+    private List<Comment> comments;
 
-    public Post(String id, String email, String createdAT, String description, String[] images, String[] category, String[] likes, Comment[] comments) {
+    public Post() {
+    }
+
+    public Post(String id, String email, String createdAT, String description, List<String> images, List<String> categories, List<String> likes, List<Comment> comments) {
         this.id = id;
         this.email = email;
         this.createdAT = createdAT;
         this.description = description;
         this.images = images;
-        this.category = category;
+        this.categories = categories;
         this.likes = likes;
         this.comments = comments;
     }
@@ -54,35 +59,35 @@ public class Post {
         this.description = description;
     }
 
-    public String[] getImages() {
+    public List<String> getImages() {
         return images;
     }
 
-    public void setImages(String[] images) {
+    public void setImages(List<String> images) {
         this.images = images;
     }
 
-    public String[] getCategory() {
-        return category;
+    public List<String> getCategories() {
+        return categories;
     }
 
-    public void setCategory(String[] category) {
-        this.category = category;
+    public void setCategories(List<String> categories) {
+        this.categories = categories;
     }
 
-    public String[] getLikes() {
+    public List<String> getLikes() {
         return likes;
     }
 
-    public void setLikes(String[] likes) {
+    public void setLikes(List<String> likes) {
         this.likes = likes;
     }
 
-    public Comment[] getComments() {
+    public List<Comment> getComments() {
         return comments;
     }
 
-    public void setComments(Comment[] comments) {
+    public void setComments(List<Comment> comments) {
         this.comments = comments;
     }
 }

@@ -8,6 +8,10 @@ public class Like {
         return likesArray;
     }
 
+    public Like() {
+
+    }
+
     public void setLikesArray(String[] likesArray) {
         this.likesArray = likesArray;
     }

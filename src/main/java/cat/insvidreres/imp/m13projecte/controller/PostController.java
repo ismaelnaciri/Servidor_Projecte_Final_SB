@@ -30,16 +30,19 @@ public class PostController {
         return postService.getAllPosts(idToken);
     }
 
-    @GetMapping("/postscat")
-    public JSONResponse getPostCat(@RequestHeader("idToken") String idToken) throws ExecutionException, InterruptedException {
+    @GetMapping("/posts")
+    public JSONResponse getPostsWithCategory(@RequestHeader("idToken") String idToken, @RequestHeader("Categories") String categories) throws ExecutionException, InterruptedException {
 
-        return postService.getPostByCategory(idToken);
+        //Categories concatenated like Category,Category,Category
+        return postService.getPostsWithCategories(idToken, categories);
     }
 
 
+    @GetMapping("/userPosts")
+    public JSONResponse getUserPosts(@RequestHeader("idToken") String idToken, @RequestParam String email) throws ExecutionException, InterruptedException {
 
-
-
+        return postService.getUserPosts(idToken, email);
+    }
 
 
 

@@ -356,44 +356,43 @@ public class UserService implements Utils {
         List<Object> dataToShow = new ArrayList<>();
 
         System.out.println("Email: " + email);
+
+
         try {
+            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+
             collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
 
 //            if (collectionApiFuture.isDone()) {
             collectionApiFuture.get().forEach((doc) -> {
                 if (Objects.equals(doc.get("email"), email)) {
 
-//                        String fbPw = Objects.requireNonNull(doc.get("password")).toString();
-//                        fbPw = decodePassword(fbPw);
                     User userToShow = doc.toObject(User.class);
-//                        userToShow.setPassword(fbPw);
+                    System.out.println("User | " + userToShow);
                     dataToShow.add(userToShow);
                 }
             });
 
             System.out.println("bugnjefbngvljsf");
 
-            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
 
             //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
             if (userToken != null) {
                 System.out.println("Adentro");
 
-                dataToShow.add(userToken);
                 return generateResponse(
                         200,
                         LocalDateTime.now().toString(),
                         "User data gotten successfully!",
                         dataToShow
                 );
+            } else {
+                return generateResponse(403,
+                        LocalDateTime.now().toString(),
+                        "Wrong email. Check again.",
+                        null
+                );
             }
-//            }
-
-            return generateResponse(403,
-                    LocalDateTime.now().toString(),
-                    "Wrong email. Check again.",
-                    null
-            );
 
         } catch (Exception e) {
             return generateResponse(500,

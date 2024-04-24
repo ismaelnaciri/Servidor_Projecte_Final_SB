@@ -1,13 +1,19 @@
 package cat.insvidreres.imp.m13projecte.entities;
 
+import java.util.List;
+
 public class Comment {
 
     private String email;
     private String comment;
     private String commentAt;
-    private String[] likes;
+    private List<String> likes;
 
-    public Comment(String email, String comment, String commentAt, String[] likes) {
+    public Comment() {
+
+    }
+
+    public Comment(String email, String comment, String commentAt, List<String> likes) {
         this.email = email;
         this.comment = comment;
         this.commentAt = commentAt;
@@ -38,11 +44,11 @@ public class Comment {
         this.commentAt = commentAt;
     }
 
-    public String[] getLikes() {
+    public List<String> getLikes() {
         return likes;
     }
 
-    public void setLikes(String[] likes) {
+    public void setLikes(List<String> likes) {
         this.likes = likes;
     }
 }
