@@ -1,5 +1,6 @@
 package cat.insvidreres.imp.m13projecte.entities;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Post {
@@ -68,9 +69,11 @@ public class Post {
     }
 
     public List<String> getCategories() {
+        if (categories == null) {
+            categories = new ArrayList<>();
+        }
         return categories;
     }
-
     public void setCategories(List<String> categories) {
         this.categories = categories;
     }
