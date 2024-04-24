@@ -30,6 +30,14 @@ public class PostController {
         return postService.getAllPosts(idToken);
     }
 
+    @GetMapping("/postscat")
+    public JSONResponse getPostCat(@RequestHeader("idToken") String idToken) throws ExecutionException, InterruptedException {
+
+        return postService.getPostByCategory(idToken);
+    }
+
+
+
 
 
 

@@ -107,6 +107,47 @@ public class PostService implements Utils {
             return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE RETRIEVING POSTS", null);
         }
     }
+
+    public JSONResponse getPostByCategory(String idToken) {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        List<Object> dataToShow = new ArrayList<>();
+
+        try {
+            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+            if (userToken == null) {
+                return generateResponse(
+                        404,
+                        LocalDateTime.now().toString(),
+                        "User token not found!",
+                        null
+                );
+            }
+
+            CollectionReference postsRef = dbFirestore.collection("posts");
+            ApiFuture<QuerySnapshot> future = postsRef.get();
+            QuerySnapshot querySnapshot = future.get();
+
+            for (QueryDocumentSnapshot document : querySnapshot.getDocuments()) {
+                Map<String, Object> postData = document.getData();
+
+                String id = (String) postData.get("id");
+                String email = (String) postData.get("email");
+                String createdAT = (String) postData.get("createdAT");
+                String description = (String) postData.get("description");
+                String[] images = ((List<String>) postData.get("images")).toArray(new String[0]);
+                String[] category = ((List<String>) postData.get("category")).toArray(new String[0]);
+                String[] likes = ((List<String>) postData.get("likes")).toArray(new String[0]);
+
+                Post post = new Post(id, email, createdAT, description, images, category, likes, null);
+                dataToShow.add(post);
+            }
+
+            return generateResponse(200, LocalDateTime.now().toString(), "Posts retrieved", dataToShow);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE RETRIEVING POSTS", null);
+        }
+    }
 }
 
 
