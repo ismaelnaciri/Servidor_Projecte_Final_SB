@@ -214,7 +214,6 @@ public class PostService implements Utils {
 
         try {
             //Deconcatenate the string
-            System.out.println("HIIII?");
             List<String> categoriesArr = List.of(categories.split(","));
 
             System.out.println("categories received | " + categoriesArr);

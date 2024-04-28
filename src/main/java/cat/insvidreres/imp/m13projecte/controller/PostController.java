@@ -19,10 +19,10 @@ public class PostController {
     @Autowired
     private PostService postService;
 
+
     @PostMapping("/posts")
     public JSONResponse savePost(@RequestBody Post post, @RequestHeader("idToken") String idToken, @RequestParam("category") String category) throws ExecutionException, InterruptedException {
-        // Asegúrate de que la categoría se establezca en el objeto Post antes de llamar a createPost
-        post.getCategories().add(category); // Agregar la categoría seleccionada
+        post.getCategories().add(category);
         return postService.createPost(post, idToken);
     }
 
@@ -76,13 +76,5 @@ public class PostController {
 
         return postService.deleteLikeCommentPost( idToken, idPost, idComment, email);
     }
-
-    @GetMapping("/categories")
-    public JSONResponse getCategories(@RequestHeader("idToken") String idToken) throws ExecutionException, InterruptedException {
-        return postService.getCategories(idToken);
-    }
-
-
-
 
 }
