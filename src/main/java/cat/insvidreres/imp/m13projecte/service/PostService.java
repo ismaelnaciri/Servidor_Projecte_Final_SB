@@ -186,6 +186,7 @@ public class PostService implements Utils {
         }
     }
 
+
     public JSONResponse getPostsWithCategories(String idToken, String categories) {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         ApiFuture<QuerySnapshot> future = null;
@@ -220,38 +221,28 @@ public class PostService implements Utils {
 
             future = dbFirestore.collection(CollectionName.POST.toString()).get();
 
+            Set<String> postIdsAdded = new HashSet<>();
+
             future.get().forEach((doc) -> {
                 List<String> postCategories = (List<String>) doc.getData().get("categories");
-
-                System.out.println("postCategories received | " + postCategories);
                 categoriesArr.forEach((item) -> {
-
                     for (String category : postCategories) {
-                        System.out.println("item | " + item + " | category | " + category);
                         if (category.trim().equals(item.trim())) {
-                            System.out.println("inside" + item);
                             Post post = doc.toObject(Post.class);
                             String postIdFirebase = (String) doc.getData().get("id");
-
-                            if (dataToShow.isEmpty()) {
+                            // Only add the post if its ID has not been added yet
+                            if (!postIdsAdded.contains(postIdFirebase)) {
                                 dataToShow.add(post);
-                            } else {
-                                dataToShow.forEach((postInDataToShow) -> {
-                                    if (postInDataToShow instanceof Post) {
-                                        if (!((Post) postInDataToShow).getId().equals(postIdFirebase)) {
-                                            dataToShow.add(post);
-                                        }
-                                    }
-                                });
+                                postIdsAdded.add(postIdFirebase);
+                                System.out.println("added " + post.getId() + " | " + post.getDescription() + " correctly!");
                             }
-//                            if (!dataToShow.contains(post)) {
-//                                System.out.println("dataToshow | " + dataToShow);
-//                                System.out.println("current post | " + post);
-//                                dataToShow.add(post);
-//                            }
                         }
-                    };
+                    }
                 });
+            });
+
+            dataToShow.forEach((post) -> {
+                System.out.println("Post email | " + ((Post) post).getEmail()+ " | Post description | " + ((Post) post).getDescription());
             });
 
             return generateResponse(
@@ -263,6 +254,7 @@ public class PostService implements Utils {
 
         } catch (Exception e) {
             System.out.println("Error | " + e.getMessage());
+            e.printStackTrace();
             return generateResponse(
                     404,
                     LocalDateTime.now().toString(),

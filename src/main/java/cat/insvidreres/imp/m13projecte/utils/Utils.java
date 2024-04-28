@@ -21,7 +21,8 @@ public interface Utils {
         USER("users"),
         POST("posts"),
         LIKE("likes"),
-        COMMENT("comments");
+        COMMENT("comments"),
+        CATEGORIES("categories"),;
 
         private final String TEXT;
 

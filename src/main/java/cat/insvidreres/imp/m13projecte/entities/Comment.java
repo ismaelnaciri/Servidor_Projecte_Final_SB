@@ -19,6 +19,10 @@ public class Comment {
         this.id = id;
     }
 
+    public Comment() {
+
+    }
+
     public String getId() {
         return id;
     }

@@ -368,7 +368,6 @@ public class UserService implements Utils {
                 if (Objects.equals(doc.get("email"), email)) {
 
                     User userToShow = doc.toObject(User.class);
-                    System.out.println("User | " + userToShow);
                     dataToShow.add(userToShow);
                 }
             });
@@ -377,7 +376,6 @@ public class UserService implements Utils {
 
             //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
             if (userToken != null) {
-                System.out.println("Adentro");
 
                 return generateResponse(
                         200,
