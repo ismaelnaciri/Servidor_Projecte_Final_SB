@@ -65,14 +65,14 @@ public class PostController {
         return postService.deleteLikePost(idToken, idPost,email);
     }
 
-    @PostMapping("/addLikePostComment")
-    public JSONResponse addLikeComment(@RequestHeader("idToken") String idToken, @RequestParam ("idPost") String idPost, @RequestParam ("idComment") String idComment, @RequestBody String email)  throws ExecutionException, InterruptedException {
+    @PutMapping("/addLikePostComment/{idPost}/{idComment}")
+    public JSONResponse addLikeComment(@RequestHeader("idToken") String idToken, @PathVariable String idPost, @PathVariable String idComment, @RequestBody String email)  throws ExecutionException, InterruptedException {
 
         return postService.addLikeCommentPost(idToken, idPost, idComment, email);
     }
 
-    @PostMapping("/deleteLikePostComment")
-    public JSONResponse deleteLikeComment(@RequestHeader("idToken") String idToken, @RequestParam ("idPost") String idPost, @RequestParam ("idComment") String idComment, @RequestBody String email)  throws ExecutionException, InterruptedException {
+    @DeleteMapping("/deleteLikePostComment/{idPost}/{idComment}")
+    public JSONResponse deleteLikeComment(@RequestHeader("idToken") String idToken, @PathVariable String idPost, @PathVariable String idComment, @RequestParam String email)  throws ExecutionException, InterruptedException {
 
         return postService.deleteLikeCommentPost( idToken, idPost, idComment, email);
     }
