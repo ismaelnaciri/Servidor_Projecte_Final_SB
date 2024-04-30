@@ -407,6 +407,7 @@ public class PostService implements Utils {
 
             future.get().forEach((doc) -> {
                 Map<String, Object> postData = doc.getData();
+                //gvnhfzgvbujzridso
 
                 List<String> likesList = (List<String>) postData.getOrDefault("likes", new ArrayList<>());
                 likesList.remove(email);
