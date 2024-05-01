@@ -434,7 +434,9 @@ public class PostService implements Utils {
 
         try {
             FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
-            if (token == null || !Objects.equals(token.getEmail(), email)) {
+            if (token == null) {
+                System.out.println("401 User token not found | " + email + " | " + token.getEmail());
+
                 return generateResponse(
                         401,
                         LocalDateTime.now().toString(),
@@ -463,7 +465,7 @@ public class PostService implements Utils {
                 for (Map<String, Object> comment : commentsList) {
                     if (idComment.equals(comment.get("id"))) {
                         List<String> likesList = (List<String>) comment.getOrDefault("likes", new ArrayList<>());
-                        likesList.add(email.trim());
+                        likesList.add(email.split("\"")[1]);
                         comment.remove("likes");
                         comment.put("likes", likesList);
                         break;
@@ -491,7 +493,8 @@ public class PostService implements Utils {
 
         try {
             FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
-            if (token == null || !Objects.equals(token.getEmail(), email)) {
+            if (token == null) {
+                System.out.println("401 User token not found | " + email + " | " + token.getEmail());
                 return generateResponse(
                         401,
                         LocalDateTime.now().toString(),
@@ -520,7 +523,7 @@ public class PostService implements Utils {
                 for (Map<String, Object> comment : commentsList) {
                     if (idComment.equals(comment.get("id"))) {
                         List<String> likesList = (List<String>) comment.getOrDefault("likes", new ArrayList<>());
-                        likesList.remove(email.trim());
+                        likesList.remove(email);
                         comment.remove("likes");
                         comment.put("likes", likesList);
                         break;
