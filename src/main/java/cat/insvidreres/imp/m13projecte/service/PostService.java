@@ -47,7 +47,7 @@ public class PostService implements Utils {
             if (documentFirebaseExisist.exists()) {
                 return generateResponse(400, LocalDateTime.now().toString(), "A post with the same ID already exists", null);
             } else {
-                Collections.sort(post.getCategories());
+//                Collections.sort(post.getCategories());
                 Map<String, Object> postData = new HashMap<>();
                 postData.put("id", post.getId());
                 postData.put("email", post.getEmail());
