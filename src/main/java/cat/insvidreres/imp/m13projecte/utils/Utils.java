@@ -21,7 +21,8 @@ public interface Utils {
         USER("users"),
         POST("posts"),
         LIKE("likes"),
-        COMMENT("comments");
+        COMMENT("comments"),
+        CATEGORIES("categories"),;
 
         private final String TEXT;
 
@@ -76,4 +77,5 @@ public interface Utils {
         byte[] decodedBytes = Base64.getDecoder().decode(password);
         return new String(decodedBytes, StandardCharsets.UTF_8);
     }
+
 }

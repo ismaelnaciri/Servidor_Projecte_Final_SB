@@ -5,21 +5,34 @@ import cat.insvidreres.imp.m13projecte.entities.User;
 import cat.insvidreres.imp.m13projecte.utils.JSONResponse;
 import cat.insvidreres.imp.m13projecte.utils.Utils;
 import com.google.api.core.ApiFuture;
+import com.google.cloud.storage.Storage;
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.BlobInfo;
+import com.google.cloud.storage.Bucket;
+import com.google.cloud.storage.StorageOptions;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
 import com.google.firebase.auth.UserRecord;
 import com.google.firebase.cloud.FirestoreClient;
 //import com.google.firestore.v1.WriteResult;
 import com.google.cloud.firestore.*;
+import com.google.firebase.cloud.StorageClient;
 import com.google.gson.Gson;
 import org.springframework.stereotype.Service;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -31,6 +44,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class UserService implements Utils {
     private static final String COLLECTION_NAME = "users";
     private static String currentToken = "";
+
 
     public JSONResponse saveUser(User user) throws InterruptedException, ExecutionException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
@@ -368,16 +382,13 @@ public class UserService implements Utils {
                 if (Objects.equals(doc.get("email"), email)) {
 
                     User userToShow = doc.toObject(User.class);
-                    System.out.println("User | " + userToShow);
                     dataToShow.add(userToShow);
                 }
             });
 
 
-
             //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
             if (userToken != null) {
-                System.out.println("Adentro");
 
                 return generateResponse(
                         200,
@@ -566,6 +577,118 @@ public class UserService implements Utils {
                     null
             );
         }
+    }
+
+
+    public JSONResponse updateUserPFP(String idToken, Map<String, Object> body) {
+        List<Object> dataToShow = new ArrayList<>();
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> future;
+
+        try {
+            FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
+            if (token == null) {
+                return generateResponse(
+                        401,
+                        LocalDateTime.now().toString(),
+                        "User token not found!",
+                        null
+                );
+            }
+        } catch (FirebaseAuthException e) {
+            e.printStackTrace();
+            return generateResponse(
+                    500,
+                    LocalDateTime.now().toString(),
+                    "Error getting token | " + e.getMessage(),
+                    null
+            );
+        }
+
+        try {
+            String email = (String) body.get("email");
+            ArrayList<Integer> imgDataList = (ArrayList<Integer>) body.get("imgData");
+            byte[] imgDataArray = new byte[imgDataList.size()];
+            for (int i = 0; i < imgDataList.size(); i++) {
+                imgDataArray[i] = imgDataList.get(i).byteValue();
+            }
+
+            System.out.println("email: " + email);
+            System.out.println("imgData length: " + imgDataArray.length);
+
+            String customFileName = "Users_PFP/" + email + "-pfp.jpg";
+
+            FileInputStream serviceAccount = new FileInputStream("src/main/resources/social-post-m13-firebase-adminsdk-jh74w-641114c269.json");
+
+            Storage storage = StorageOptions.newBuilder()
+                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                    .build()
+                    .getService();
+
+            BlobId blobId = BlobId.of("social-post-m13.appspot.com", customFileName);
+
+            BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
+                    .setContentType("image/jpeg")
+                    .build();
+
+            storage.create(blobInfo, imgDataArray);
+
+            String fileUrl = getDownloadUrl(storage, blobId);
+            System.out.println("Link of new profile pfp: " + fileUrl);
+
+            try {
+                future = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
+                future.get();
+
+                if (future.isDone()) {
+                    System.out.println("inside first if");
+                    future.get().forEach((doc) -> {
+                        if (Objects.equals(doc.get("email"), email)) {
+                            System.out.println("HELLO?");
+                            Map<String, Object> updates = new HashMap<>();
+
+                            if (!Objects.equals(doc.get("img"), fileUrl)) {
+                                updates.put("img", fileUrl);
+                                dataToShow.add(fileUrl);
+                            }
+
+                            dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update(updates);
+
+                            System.out.println("user " + email + " img field updated correctly");
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.out.println("Error | " + e.getMessage());
+                return generateResponse(
+                        500,
+                        LocalDateTime.now().toString(),
+                        e.getMessage(),
+                        null
+                );
+            }
+
+            return generateResponse(
+                    200,
+                    LocalDateTime.now().toString(),
+                    "User pfp correctly updated!",
+                    dataToShow);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return generateResponse(
+                    500,
+                    LocalDateTime.now().toString(),
+                    e.getMessage(),
+                    null
+            );
+        }
+    }
+
+    private String getDownloadUrl(Storage storage, BlobId blobId) {
+        Blob blob = storage.get(blobId);
+        //1 year duration of url
+        return blob.signUrl(525_600, java.util.concurrent.TimeUnit.MINUTES).toString();
     }
 
 }

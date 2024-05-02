@@ -22,6 +22,7 @@ public class FirebaseConfig {
         FirebaseOptions options = FirebaseOptions.builder()
                 .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                 .setDatabaseUrl("https://social-post-m13.firebaseio.com")
+                .setStorageBucket("social-post-m13.appspot.com")
                 .build();
 
         FirebaseApp.initializeApp(options);

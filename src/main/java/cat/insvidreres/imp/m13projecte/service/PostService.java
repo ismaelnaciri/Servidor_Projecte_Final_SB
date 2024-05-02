@@ -186,6 +186,7 @@ public class PostService implements Utils {
         }
     }
 
+
     public JSONResponse getPostsWithCategories(String idToken, String categories) {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         ApiFuture<QuerySnapshot> future = null;
@@ -213,45 +214,34 @@ public class PostService implements Utils {
 
         try {
             //Deconcatenate the string
-            System.out.println("HIIII?");
             List<String> categoriesArr = List.of(categories.split(","));
 
             System.out.println("categories received | " + categoriesArr);
 
             future = dbFirestore.collection(CollectionName.POST.toString()).get();
 
+            Set<String> postIdsAdded = new HashSet<>();
+
             future.get().forEach((doc) -> {
                 List<String> postCategories = (List<String>) doc.getData().get("categories");
-
-                System.out.println("postCategories received | " + postCategories);
                 categoriesArr.forEach((item) -> {
-
                     for (String category : postCategories) {
-                        System.out.println("item | " + item + " | category | " + category);
                         if (category.trim().equals(item.trim())) {
-                            System.out.println("inside" + item);
                             Post post = doc.toObject(Post.class);
                             String postIdFirebase = (String) doc.getData().get("id");
-
-                            if (dataToShow.isEmpty()) {
+                            // Only add the post if its ID has not been added yet
+                            if (!postIdsAdded.contains(postIdFirebase)) {
                                 dataToShow.add(post);
-                            } else {
-                                dataToShow.forEach((postInDataToShow) -> {
-                                    if (postInDataToShow instanceof Post) {
-                                        if (!((Post) postInDataToShow).getId().equals(postIdFirebase)) {
-                                            dataToShow.add(post);
-                                        }
-                                    }
-                                });
+                                postIdsAdded.add(postIdFirebase);
+                                System.out.println("added " + post.getId() + " | " + post.getDescription() + " correctly!");
                             }
-//                            if (!dataToShow.contains(post)) {
-//                                System.out.println("dataToshow | " + dataToShow);
-//                                System.out.println("current post | " + post);
-//                                dataToShow.add(post);
-//                            }
                         }
-                    };
+                    }
                 });
+            });
+
+            dataToShow.forEach((post) -> {
+                System.out.println("Post email | " + ((Post) post).getEmail() + " | Post description | " + ((Post) post).getDescription());
             });
 
             return generateResponse(
@@ -263,6 +253,7 @@ public class PostService implements Utils {
 
         } catch (Exception e) {
             System.out.println("Error | " + e.getMessage());
+            e.printStackTrace();
             return generateResponse(
                     404,
                     LocalDateTime.now().toString(),
@@ -335,7 +326,7 @@ public class PostService implements Utils {
     public JSONResponse addLikePost(String idToken, String idPost, String email) {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         List<Object> dataToShow = new ArrayList<>();
-
+        ApiFuture<QuerySnapshot> future = null;
 
         try {
             FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
@@ -358,30 +349,30 @@ public class PostService implements Utils {
         }
 
         try {
+            future = dbFirestore.collection("posts").whereEqualTo("id", idPost).get();
 
-            DocumentReference postRef = dbFirestore.collection("posts").document(idPost);
-            DocumentSnapshot postSnapshot = postRef.get().get();
-
-            if (postSnapshot.exists()) {
-                Map<String, Object> postData = postSnapshot.getData();
+            future.get().forEach((doc) -> {
+                Map<String, Object> postData = doc.getData();
 
                 List<String> likesList = (List<String>) postData.getOrDefault("likes", new ArrayList<>());
 
-                likesList.add(email.trim());
+                if (!likesList.contains(email.split("\"")[1])) {
+                    System.out.println("email | " + email.split("\"")[1]);
+                    likesList.add(email.split("\"")[1]);
+                }
+                System.out.println(likesList);
 
-                postData.put("likes", likesList);
-                postRef.set(postData);
-
+                dbFirestore.collection("posts").document(doc.getId()).update("likes", likesList);
                 dataToShow.add(postData);
+                System.out.println("LIKE INSERTED SUCCESSFULLY");
 
-                System.out.println("LIKE ADDED SUCCESSFULLY");
-                return generateResponse(200, LocalDateTime.now().toString(), "Like added successfully", dataToShow);
-            } else {
-                return generateResponse(404, LocalDateTime.now().toString(), "Post with ID " + idPost + " not found", null);
-            }
+            });
+
+            return generateResponse(200, LocalDateTime.now().toString(), "Like inserted successfully", dataToShow);
+
         } catch (Exception e) {
             e.printStackTrace();
-            return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE ADDING LIKE | " + e.getMessage(), null);
+            return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE INSERTING LIKE | " + e.getMessage(), null);
         }
     }
 
@@ -389,6 +380,7 @@ public class PostService implements Utils {
     public JSONResponse deleteLikePost(String idToken, String idPost, String email) {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         List<Object> dataToShow = new ArrayList<>();
+        ApiFuture<QuerySnapshot> future = null;
 
         try {
             FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
@@ -411,77 +403,82 @@ public class PostService implements Utils {
         }
 
         try {
-            DocumentReference postRef = dbFirestore.collection("posts").document(idPost);
-            DocumentSnapshot postSnapshot = postRef.get().get();
+            future = dbFirestore.collection("posts").whereEqualTo("id", idPost).get();
 
-            if (postSnapshot.exists()) {
-                Map<String, Object> postData = postSnapshot.getData();
+            future.get().forEach((doc) -> {
+                Map<String, Object> postData = doc.getData();
 
                 List<String> likesList = (List<String>) postData.getOrDefault("likes", new ArrayList<>());
+                likesList.remove(email);
                 System.out.println(likesList);
 
-                likesList.remove(email.trim());
-                System.out.println(likesList);
-
-                postData.put("likes", likesList);
-                postRef.set(postData);
-
+                dbFirestore.collection("posts").document(doc.getId()).update("likes", likesList);
                 dataToShow.add(postData);
-
                 System.out.println("LIKE REMOVED SUCCESSFULLY");
-                return generateResponse(200, LocalDateTime.now().toString(), "Like removed successfully", dataToShow);
-            } else {
-                return generateResponse(404, LocalDateTime.now().toString(), "Post with ID " + idPost + " not found", null);
-            }
+
+            });
+
+            return generateResponse(200, LocalDateTime.now().toString(), "Like removed successfully", dataToShow);
+
         } catch (Exception e) {
             e.printStackTrace();
             return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE REMOVING LIKE | " + e.getMessage(), null);
         }
     }
 
+
     public JSONResponse addLikeCommentPost(String idToken, String idPost, String idComment, String email) {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         List<Object> dataToShow = new ArrayList<>();
+        ApiFuture<QuerySnapshot> future = null;
 
         try {
             FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
             if (token == null) {
-                return generateResponse(401, LocalDateTime.now().toString(), "User token not found!", null);
+                System.out.println("401 User token not found | " + email + " | " + token.getEmail());
+
+                return generateResponse(
+                        401,
+                        LocalDateTime.now().toString(),
+                        "User token not found!",
+                        null
+                );
             }
         } catch (FirebaseAuthException e) {
             System.out.println("Error getting token | " + e.getMessage());
-            return generateResponse(500, LocalDateTime.now().toString(), "Error getting token | " + e.getMessage(), null);
+            generateResponse(
+                    500,
+                    LocalDateTime.now().toString(),
+                    "Error getting token | " + e.getMessage(),
+                    null
+            );
         }
 
         try {
-            DocumentReference postRef = dbFirestore.collection("posts").document(idPost);
-            DocumentSnapshot postSnapshot = postRef.get().get();
+            future = dbFirestore.collection("posts").whereEqualTo("id", idPost).get();
 
-            if (postSnapshot.exists()) {
-                Map<String, Object> postData = postSnapshot.getData();
+            future.get().forEach((doc) -> {
+                Map<String, Object> postData = doc.getData();
 
                 List<Map<String, Object>> commentsList = (List<Map<String, Object>>) postData.getOrDefault("comments", new ArrayList<>());
-
 
                 for (Map<String, Object> comment : commentsList) {
                     if (idComment.equals(comment.get("id"))) {
                         List<String> likesList = (List<String>) comment.getOrDefault("likes", new ArrayList<>());
-                        likesList.add(email.trim());
+                        likesList.add(email.split("\"")[1]);
+                        comment.remove("likes");
                         comment.put("likes", likesList);
                         break;
                     }
                 }
 
-                postData.put("comments", commentsList);
-                postRef.set(postData);
-
+                dbFirestore.collection("posts").document(doc.getId()).update("comments", commentsList);
                 dataToShow.add(postData);
 
                 System.out.println("COMMENT LIKE ADDED SUCCESSFULLY");
-                return generateResponse(200, LocalDateTime.now().toString(), "Like added successfully", dataToShow);
-            } else {
-                return generateResponse(404, LocalDateTime.now().toString(), "Post with ID " + idPost + " not found", null);
-            }
+            });
+
+            return generateResponse(200, LocalDateTime.now().toString(), "Like added successfully", dataToShow);
         } catch (Exception e) {
             e.printStackTrace();
             return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE ADDING LIKE | " + e.getMessage(), null);
@@ -489,54 +486,104 @@ public class PostService implements Utils {
     }
 
 
-    public JSONResponse deleteLikeCommentPost(String idToken, String idPost,  String idComment, String email) {
+    public JSONResponse deleteLikeCommentPost(String idToken, String idPost, String idComment, String email) {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        List<Object> dataToShow = new ArrayList<>();
+        ApiFuture<QuerySnapshot> future = null;
+
+        try {
+            FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
+            if (token == null) {
+                System.out.println("401 User token not found | " + email + " | " + token.getEmail());
+                return generateResponse(
+                        401,
+                        LocalDateTime.now().toString(),
+                        "User token not found!",
+                        null
+                );
+            }
+        } catch (FirebaseAuthException e) {
+            System.out.println("Error getting token | " + e.getMessage());
+            generateResponse(
+                    500,
+                    LocalDateTime.now().toString(),
+                    "Error getting token | " + e.getMessage(),
+                    null
+            );
+        }
+
+        try {
+            future = dbFirestore.collection("posts").whereEqualTo("id", idPost).get();
+
+            future.get().forEach((doc) -> {
+                Map<String, Object> postData = doc.getData();
+
+                List<Map<String, Object>> commentsList = (List<Map<String, Object>>) postData.getOrDefault("comments", new ArrayList<>());
+
+                for (Map<String, Object> comment : commentsList) {
+                    if (idComment.equals(comment.get("id"))) {
+                        List<String> likesList = (List<String>) comment.getOrDefault("likes", new ArrayList<>());
+                        likesList.remove(email);
+                        comment.remove("likes");
+                        comment.put("likes", likesList);
+                        break;
+                    }
+                }
+
+                dbFirestore.collection("posts").document(doc.getId()).update("comments", commentsList);
+                dataToShow.add(postData);
+
+                System.out.println("COMMENT LIKE DELETED SUCCESSFULLY");
+            });
+
+            return generateResponse(200, LocalDateTime.now().toString(), "Like DELETED successfully", dataToShow);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE DELETING LIKE | " + e.getMessage(), null);
+        }
+    }
+
+    public JSONResponse getCategories(String idToken) {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         List<Object> dataToShow = new ArrayList<>();
 
         try {
-            FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
-            if (token == null) {
-                return generateResponse(401, LocalDateTime.now().toString(), "User token not found!", null);
+            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+            if (userToken == null) {
+                return generateResponse(
+                        401,
+                        LocalDateTime.now().toString(),
+                        "User token not found!",
+                        null
+                );
             }
-        } catch (FirebaseAuthException e) {
-            System.out.println("Error getting token | " + e.getMessage());
-            return generateResponse(500, LocalDateTime.now().toString(), "Error getting token | " + e.getMessage(), null);
-        }
 
-        try {
-            DocumentReference postRef = dbFirestore.collection("posts").document(idPost);
-            DocumentSnapshot postSnapshot = postRef.get().get();
+            DocumentReference typeDocRef = dbFirestore.collection("categories").document("Type");
+            ApiFuture<DocumentSnapshot> typeDocFuture = typeDocRef.get();
+            DocumentSnapshot typeDocSnapshot = typeDocFuture.get();
 
-            if (postSnapshot.exists()) {
-                Map<String, Object> postData = postSnapshot.getData();
+            if (typeDocSnapshot.exists() && typeDocSnapshot.contains("categories")) {
+                List<String> categories = (List<String>) typeDocSnapshot.get("categories");
 
-                List<Map<String, Object>> commentsList = (List<Map<String, Object>>) postData.getOrDefault("comments", new ArrayList<>());
-
-
-                for (Map<String, Object> comment : commentsList) {
-                    if (idComment.equals(comment.get("id"))) {
-                        List<String> likesList = (List<String>) comment.getOrDefault("likes", new ArrayList<>());
-                        likesList.remove(email.trim());
-                        comment.put("likes", likesList);
-                        break;
-                    }
-                }
-
-                postData.put("comments", commentsList);
-                postRef.set(postData);
-
-                dataToShow.add(postData);
-
-                System.out.println("DELETE LIKE ADDED SUCCESSFULLY");
-                return generateResponse(200, LocalDateTime.now().toString(), "Like added successfully", dataToShow);
+                dataToShow.addAll(categories);
             } else {
-                return generateResponse(404, LocalDateTime.now().toString(), "Post with ID " + idPost + " not found", null);
+                return generateResponse(
+                        404,
+                        LocalDateTime.now().toString(),
+                        "Categories not found!",
+                        null
+                );
             }
+
+
+            return generateResponse(200, LocalDateTime.now().toString(), "Posts retrieved", dataToShow);
         } catch (Exception e) {
             e.printStackTrace();
-            return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE ADDING LIKE | " + e.getMessage(), null);
+            return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE RETRIEVING POSTS", null);
         }
     }
+
+
 }
 
 
