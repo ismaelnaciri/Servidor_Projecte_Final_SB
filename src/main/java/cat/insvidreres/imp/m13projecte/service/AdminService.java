@@ -6,6 +6,7 @@ import cat.insvidreres.imp.m13projecte.utils.JSONResponse;
 import cat.insvidreres.imp.m13projecte.utils.Utils;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.Filter;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QuerySnapshot;
 import com.google.firebase.auth.*;
@@ -76,45 +77,49 @@ public class AdminService implements Utils {
     }
 
 
-    public JSONResponse login(String idToken) {
+    public JSONResponse login(String idToken, User user) {
         List<Object> dataToShow = new ArrayList<>();
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> collectionApiFuture;
+
+        checkIdToken(idToken);
+
         try {
+            String encryptedPassword = encryptPassword(user.getPassword(), SALT);
+            System.out.println("encrypted password: " + encryptedPassword);
 
-            if (idToken == null || idToken.isEmpty()) {
-                return generateResponse(
-                        401,
-                        LocalDateTime.now().toString(),
-                        "Wrong credentials.",
-                        null
-                );
-            }
+            collectionApiFuture = dbFirestore.collection(CollectionName.ADMINS.toString()).whereEqualTo("email", user.getEmail()).get();
+            collectionApiFuture.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("email"), user.getEmail())
+                || Objects.equals(doc.get("password"), encryptedPassword)) {
+                    user.setPassword(encryptedPassword);
+                    dataToShow.add(user);
+                    System.out.println("found admin!!");
+                }
+            });
 
-            System.out.println("TOKEN   |  " + idToken);
-            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
-
-            //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
-            if (userToken != null) {
-                currentToken = idToken;
-                dataToShow.add(userToken);
+            if (!dataToShow.isEmpty()) {
                 return generateResponse(
                         200,
                         LocalDateTime.now().toString(),
-                        "User logged in successfully!",
+                        "Retrieved admins successfully",
                         dataToShow
                 );
             } else {
                 return generateResponse(
                         404,
                         LocalDateTime.now().toString(),
-                        "Error getting user token ",
+                        "No admins found with that email and password!",
                         null
                 );
             }
         } catch (Exception e) {
+            System.out.println("Error in getting admins | " + e.getMessage());
+            e.printStackTrace();
             return generateResponse(
                     500,
                     LocalDateTime.now().toString(),
-                    e.getMessage(),
+                    "Error | " + e.getMessage(),
                     null
             );
         }
@@ -258,6 +263,8 @@ public class AdminService implements Utils {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         ApiFuture<QuerySnapshot> collectionApiFuture;
 
+        checkIdToken(idToken);
+
         try {
             collectionApiFuture = dbFirestore.collection(CollectionName.POST.toString()).get();
             collectionApiFuture.get().forEach((doc) -> {
@@ -294,4 +301,5 @@ public class AdminService implements Utils {
             );
         }
     }
+
 }

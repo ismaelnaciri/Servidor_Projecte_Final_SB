@@ -24,7 +24,9 @@ public interface Utils {
         POST("posts"),
         LIKE("likes"),
         COMMENT("comments"),
-        CATEGORIES("categories"),;
+        CATEGORIES("categories"),
+        ADMINS("admins"),
+        ;
 
         private final String TEXT;
 
@@ -84,6 +86,7 @@ public interface Utils {
     default JSONResponse checkIdToken(String idToken) {
         try {
             FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
+            System.out.println("Token UID | " + token.getUid());
             if (token == null) {
                 return generateResponse(
                         401,

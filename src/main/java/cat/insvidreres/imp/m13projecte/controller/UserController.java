@@ -31,9 +31,9 @@ public class UserController {
     }
 
     @PostMapping("/users/login")
-    public JSONResponse userLogin(@RequestHeader("idToken") String idToken) throws ExecutionException, InterruptedException {
+    public JSONResponse userLogin(@RequestHeader("idToken") String idToken, @RequestBody User user) throws ExecutionException, InterruptedException {
 
-        return userService.login(idToken);
+        return userService.login(idToken, user);
     }
 
     @GetMapping("/users")

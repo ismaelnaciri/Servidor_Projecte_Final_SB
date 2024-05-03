@@ -64,10 +64,10 @@ public class UserService implements Utils {
                 conn.setRequestProperty("Content-Type", "application/json");
                 conn.setDoOutput(true);
 
-//            String encryptedPassword = encryptPassword(user.getPassword(), SALT);
+                String encryptedPassword = encryptPassword(user.getPassword(), SALT);
                 Map<String, Object> requestBody = new HashMap<>();
                 requestBody.put("email", user.getEmail());
-                requestBody.put("password", user.getPassword());
+                requestBody.put("password", encryptedPassword);
                 requestBody.put("displayName", user.getFirstName());
 //                    requestBody.put("idToken", jwtToFirebase);
                 requestBody.put("emailVerified", false);
@@ -418,10 +418,12 @@ public class UserService implements Utils {
     }
 
 
-    public JSONResponse login(String idToken) {
+    public JSONResponse login(String idToken, User user) throws ExecutionException, InterruptedException {
         List<Object> dataToShow = new ArrayList<>();
-        try {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> collectionApiFuture;
 
+        try {
             if (idToken == null || idToken.isEmpty()) {
                 return generateResponse(
                         401,
@@ -433,11 +435,19 @@ public class UserService implements Utils {
 
             System.out.println("TOKEN   |  " + idToken);
             FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+            String encryptedPassword = encryptPassword(user.getPassword(), SALT);
 
-            //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
-            if (userToken != null) {
-                currentToken = idToken;
-                dataToShow.add(userToken);
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", user.getEmail()).get();
+            collectionApiFuture.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("email"), user.getEmail())
+                        || Objects.equals(doc.get("password"), encryptedPassword)) {
+                    dataToShow.add(doc);
+                    System.out.println("found admin!!");
+                }
+            });
+
+            if (!dataToShow.isEmpty() && user != null) {
+                dataToShow.add(userToken.toString());
                 return generateResponse(
                         200,
                         LocalDateTime.now().toString(),
@@ -448,7 +458,7 @@ public class UserService implements Utils {
                 return generateResponse(
                         404,
                         LocalDateTime.now().toString(),
-                        "Error getting user token ",
+                        "Error getting user token",
                         null
                 );
             }

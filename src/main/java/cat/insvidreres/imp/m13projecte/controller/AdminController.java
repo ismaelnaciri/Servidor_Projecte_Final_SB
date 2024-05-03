@@ -14,13 +14,14 @@ public class AdminController {
     private AdminService adminService;
 
     @PostMapping("/admin/login")
-    public JSONResponse login(@RequestHeader("idToken") String idToken) {
-        return adminService.login(idToken);
+    public JSONResponse login(@RequestHeader("idToken") String idToken, @RequestBody User user) {
+
+        return adminService.login(idToken, user);
     }
 
     @DeleteMapping("/admin/deletePost/{idPost}")
     public JSONResponse deletePost(@RequestHeader("idToken") String idToken, @PathVariable String idPost) {
-        //Call adminService
+
         return adminService.deletePost(idPost, idPost);
     }
 
@@ -48,4 +49,5 @@ public class AdminController {
 
         return adminService.deleteUser(idToken, user);
     }
+
 }
