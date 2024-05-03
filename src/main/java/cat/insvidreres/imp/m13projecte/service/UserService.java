@@ -11,38 +11,28 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
-import com.google.cloud.storage.Bucket;
 import com.google.cloud.storage.StorageOptions;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseAuthException;
-import com.google.firebase.auth.FirebaseToken;
-import com.google.firebase.auth.UserRecord;
+import com.google.firebase.auth.*;
 import com.google.firebase.cloud.FirestoreClient;
 //import com.google.firestore.v1.WriteResult;
 import com.google.cloud.firestore.*;
-import com.google.firebase.cloud.StorageClient;
 import com.google.gson.Gson;
 import org.springframework.stereotype.Service;
 
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static java.lang.Integer.parseInt;
+
 @Service
 public class UserService implements Utils {
-    private static final String COLLECTION_NAME = "users";
     private static String currentToken = "";
 
 
@@ -233,6 +223,8 @@ public class UserService implements Utils {
         ApiFuture<QuerySnapshot> collectionApiFuture = null;
         List<Object> dataToShow = new ArrayList<>();
 
+        checkIdToken(idToken);
+
         try {
 
             collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
@@ -247,24 +239,12 @@ public class UserService implements Utils {
                 });
             }
 
-            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
-
-            if (userToken != null) {
-                dataToShow.add(userToken);
-                return generateResponse(
-                        200,
-                        LocalDateTime.now().toString(),
-                        "User deleted successfully!",
-                        dataToShow
-                );
-            } else {
-                return generateResponse(
-                        404,
-                        LocalDateTime.now().toString(),
-                        "User token not found!",
-                        null
-                );
-            }
+            return generateResponse(
+                    200,
+                    LocalDateTime.now().toString(),
+                    "User deleted successfully!",
+                    dataToShow
+            );
 
         } catch (Exception e) {
             System.out.println("ERROR DELETING USER | " + e.getMessage());
@@ -280,6 +260,8 @@ public class UserService implements Utils {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         ApiFuture<QuerySnapshot> collectionApiFuture = null;
         List<Object> dataToShow = new ArrayList<>();
+
+        checkIdToken(idToken);
 
 
         try {
@@ -325,25 +307,13 @@ public class UserService implements Utils {
                         dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update(updates);
                     }
                 });
-                FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
 
-                //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
-                if (userToken != null) {
-                    dataToShow.add(userToken);
-                    return generateResponse(
-                            200,
-                            LocalDateTime.now().toString(),
-                            "User logged in successfully!",
-                            dataToShow
-                    );
-                } else {
-                    return generateResponse(
-                            404,
-                            LocalDateTime.now().toString(),
-                            "User token not found!",
-                            null
-                    );
-                }
+                return generateResponse(
+                        200,
+                        LocalDateTime.now().toString(),
+                        "User logged in successfully!",
+                        dataToShow
+                );
 
             } else {
                 return generateResponse(
@@ -369,8 +339,9 @@ public class UserService implements Utils {
         ApiFuture<QuerySnapshot> collectionApiFuture = null;
         List<Object> dataToShow = new ArrayList<>();
 
-        System.out.println("Email: " + email);
+        checkIdToken(idToken);
 
+        System.out.println("Email: " + email);
 
         try {
             FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
@@ -386,23 +357,13 @@ public class UserService implements Utils {
                 }
             });
 
-
+            return generateResponse(
+                    200,
+                    LocalDateTime.now().toString(),
+                    "User data gotten successfully!",
+                    dataToShow
+            );
             //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
-            if (userToken != null) {
-
-                return generateResponse(
-                        200,
-                        LocalDateTime.now().toString(),
-                        "User data gotten successfully!",
-                        dataToShow
-                );
-            } else {
-                return generateResponse(403,
-                        LocalDateTime.now().toString(),
-                        "Wrong email. Check again.",
-                        null
-                );
-            }
 
         } catch (Exception e) {
             return generateResponse(500,
@@ -412,67 +373,12 @@ public class UserService implements Utils {
         }
     }
 
-    public JSONResponse testSaltHashGet(String email, String password) throws ExecutionException, InterruptedException, NoSuchAlgorithmException {
-        Firestore dbFirestore = FirestoreClient.getFirestore();
-        ApiFuture<QuerySnapshot> collectionApiFuture = null;
-        List<Object> dataToShow = new ArrayList<>();
-
-        AtomicReference<String> paramPW = new AtomicReference<>("");
-
-
-        try {
-            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
-
-            if (collectionApiFuture.isDone()) {
-                collectionApiFuture.get().forEach((doc) -> {
-                    if (Objects.equals(doc.get("email"), email)) {
-                        String salt = Utils.SALT;
-
-                        try {
-                            paramPW.set(encryptPassword(password, salt));
-
-                            System.out.println("doc EXISTS in test :)");
-
-                            String pw = Objects.requireNonNull(doc.get("password")).toString();
-                            pw = encryptPassword(pw, salt);
-
-                            System.out.println("pw from doc  |  " + pw);
-                            if (Objects.equals(pw, paramPW.get())) {
-                                dataToShow.add(doc.toObject(User.class));
-
-                            }
-                        } catch (NoSuchAlgorithmException e) {
-                            generateResponse(500,
-                                    LocalDateTime.now().toString(),
-                                    e.getMessage(),
-                                    null);
-                        }
-                    }
-                });
-
-                return generateResponse(200,
-                        LocalDateTime.now().toString(),
-                        "User gotten with hash correctly",
-                        dataToShow);
-
-            }
-        } catch (Exception e) {
-            return generateResponse(500,
-                    LocalDateTime.now().toString(),
-                    e.getMessage(),
-                    null);
-        }
-
-
-        return generateResponse(420,
-                LocalDateTime.now().toString(),
-                "Thrown in saltHashGet, look into it",
-                null);
-    }
 
     public JSONResponse getUsers(String idToken) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         List<Object> dataToShow = new ArrayList<>();
+
+        checkIdToken(idToken);
 
         try {
             Iterable<DocumentReference> documentReference = dbFirestore.collection(CollectionName.USER.toString()).listDocuments();
@@ -490,21 +396,11 @@ public class UserService implements Utils {
                 }
                 FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
 
+                return generateResponse(200,
+                        LocalDateTime.now().toString(),
+                        "Users retreived correctly.",
+                        dataToShow);
                 //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
-                if (userToken != null) {
-                    dataToShow.add(userToken);
-                    return generateResponse(200,
-                            LocalDateTime.now().toString(),
-                            "Users retreived correctly.",
-                            dataToShow);
-                } else {
-                    return generateResponse(
-                            403,
-                            LocalDateTime.now().toString(),
-                            "Error verifying user Token",
-                            null
-                    );
-                }
 
             }
         } catch (Exception e) {
@@ -521,21 +417,8 @@ public class UserService implements Utils {
                 null);
     }
 
+
     public JSONResponse login(String idToken) {
-        try {
-            return signInWithEmailAndPassword(idToken);
-
-        } catch (Exception e) {
-            return generateResponse(
-                    500,
-                    LocalDateTime.now().toString(),
-                    e.getMessage(),
-                    null
-            );
-        }
-    }
-
-    public JSONResponse signInWithEmailAndPassword(String idToken) {
         List<Object> dataToShow = new ArrayList<>();
         try {
 
@@ -585,25 +468,7 @@ public class UserService implements Utils {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         ApiFuture<QuerySnapshot> future;
 
-        try {
-            FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
-            if (token == null) {
-                return generateResponse(
-                        401,
-                        LocalDateTime.now().toString(),
-                        "User token not found!",
-                        null
-                );
-            }
-        } catch (FirebaseAuthException e) {
-            e.printStackTrace();
-            return generateResponse(
-                    500,
-                    LocalDateTime.now().toString(),
-                    "Error getting token | " + e.getMessage(),
-                    null
-            );
-        }
+        checkIdToken(idToken);
 
         try {
             String email = (String) body.get("email");

@@ -26,19 +26,9 @@ public class PostService implements Utils {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         List<Object> dataToShow = new ArrayList<>();
 
+        checkIdToken(idToken);
+
         try {
-
-            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
-
-            //https://firebase.google.com/docs/auth/admin/verify-id-tokens#javaA
-            if (userToken == null) {
-                return generateResponse(
-                        404,
-                        LocalDateTime.now().toString(),
-                        "User token not found!",
-                        null
-                );
-            }
 
             System.out.println("gnrsngvfsoa | " + post.getId());
             DocumentReference postRef = dbFirestore.collection("posts").document();
@@ -92,17 +82,10 @@ public class PostService implements Utils {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         List<Object> dataToShow = new ArrayList<>();
 
-        try {
-            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
-            if (userToken == null) {
-                return generateResponse(
-                        401,
-                        LocalDateTime.now().toString(),
-                        "User token not found!",
-                        null
-                );
-            }
+        checkIdToken(idToken);
 
+
+        try {
             CollectionReference postsRef = dbFirestore.collection("posts");
             ApiFuture<QuerySnapshot> future = postsRef.get();
             QuerySnapshot querySnapshot = future.get();
@@ -192,25 +175,7 @@ public class PostService implements Utils {
         ApiFuture<QuerySnapshot> future = null;
         List<Object> dataToShow = new ArrayList<>();
 
-        try {
-            FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
-            if (token == null) {
-                return generateResponse(
-                        401,
-                        LocalDateTime.now().toString(),
-                        "User token not found!",
-                        null
-                );
-            }
-        } catch (FirebaseAuthException e) {
-            System.out.println("Error getting token | " + e.getMessage());
-            generateResponse(
-                    500,
-                    LocalDateTime.now().toString(),
-                    "Error getting token | " + e.getMessage(),
-                    null
-            );
-        }
+        checkIdToken(idToken);
 
         try {
             //Deconcatenate the string
@@ -268,25 +233,7 @@ public class PostService implements Utils {
         List<Object> dataToShow = new ArrayList<>();
 
 
-        try {
-            FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
-            if (token == null) {
-                return generateResponse(
-                        401,
-                        LocalDateTime.now().toString(),
-                        "User token not found!",
-                        null
-                );
-            }
-        } catch (FirebaseAuthException e) {
-            System.out.println("Error getting token | " + e.getMessage());
-            generateResponse(
-                    500,
-                    LocalDateTime.now().toString(),
-                    "Error getting token | " + e.getMessage(),
-                    null
-            );
-        }
+        checkIdToken(idToken);
 
         try {
 
@@ -328,25 +275,7 @@ public class PostService implements Utils {
         List<Object> dataToShow = new ArrayList<>();
         ApiFuture<QuerySnapshot> future = null;
 
-        try {
-            FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
-            if (token == null) {
-                return generateResponse(
-                        401,
-                        LocalDateTime.now().toString(),
-                        "User token not found!",
-                        null
-                );
-            }
-        } catch (FirebaseAuthException e) {
-            System.out.println("Error getting token | " + e.getMessage());
-            generateResponse(
-                    500,
-                    LocalDateTime.now().toString(),
-                    "Error getting token | " + e.getMessage(),
-                    null
-            );
-        }
+        checkIdToken(idToken);
 
         try {
             future = dbFirestore.collection("posts").whereEqualTo("id", idPost).get();
@@ -382,25 +311,7 @@ public class PostService implements Utils {
         List<Object> dataToShow = new ArrayList<>();
         ApiFuture<QuerySnapshot> future = null;
 
-        try {
-            FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
-            if (token == null) {
-                return generateResponse(
-                        401,
-                        LocalDateTime.now().toString(),
-                        "User token not found!",
-                        null
-                );
-            }
-        } catch (FirebaseAuthException e) {
-            System.out.println("Error getting token | " + e.getMessage());
-            generateResponse(
-                    500,
-                    LocalDateTime.now().toString(),
-                    "Error getting token | " + e.getMessage(),
-                    null
-            );
-        }
+        checkIdToken(idToken);
 
         try {
             future = dbFirestore.collection("posts").whereEqualTo("id", idPost).get();
@@ -432,27 +343,7 @@ public class PostService implements Utils {
         List<Object> dataToShow = new ArrayList<>();
         ApiFuture<QuerySnapshot> future = null;
 
-        try {
-            FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
-            if (token == null) {
-                System.out.println("401 User token not found | " + email + " | " + token.getEmail());
-
-                return generateResponse(
-                        401,
-                        LocalDateTime.now().toString(),
-                        "User token not found!",
-                        null
-                );
-            }
-        } catch (FirebaseAuthException e) {
-            System.out.println("Error getting token | " + e.getMessage());
-            generateResponse(
-                    500,
-                    LocalDateTime.now().toString(),
-                    "Error getting token | " + e.getMessage(),
-                    null
-            );
-        }
+        checkIdToken(idToken);
 
         try {
             future = dbFirestore.collection("posts").whereEqualTo("id", idPost).get();
@@ -491,26 +382,7 @@ public class PostService implements Utils {
         List<Object> dataToShow = new ArrayList<>();
         ApiFuture<QuerySnapshot> future = null;
 
-        try {
-            FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
-            if (token == null) {
-                System.out.println("401 User token not found | " + email + " | " + token.getEmail());
-                return generateResponse(
-                        401,
-                        LocalDateTime.now().toString(),
-                        "User token not found!",
-                        null
-                );
-            }
-        } catch (FirebaseAuthException e) {
-            System.out.println("Error getting token | " + e.getMessage());
-            generateResponse(
-                    500,
-                    LocalDateTime.now().toString(),
-                    "Error getting token | " + e.getMessage(),
-                    null
-            );
-        }
+        checkIdToken(idToken);
 
         try {
             future = dbFirestore.collection("posts").whereEqualTo("id", idPost).get();
@@ -542,47 +414,6 @@ public class PostService implements Utils {
             return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE DELETING LIKE | " + e.getMessage(), null);
         }
     }
-
-    public JSONResponse getCategories(String idToken) {
-        Firestore dbFirestore = FirestoreClient.getFirestore();
-        List<Object> dataToShow = new ArrayList<>();
-
-        try {
-            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
-            if (userToken == null) {
-                return generateResponse(
-                        401,
-                        LocalDateTime.now().toString(),
-                        "User token not found!",
-                        null
-                );
-            }
-
-            DocumentReference typeDocRef = dbFirestore.collection("categories").document("Type");
-            ApiFuture<DocumentSnapshot> typeDocFuture = typeDocRef.get();
-            DocumentSnapshot typeDocSnapshot = typeDocFuture.get();
-
-            if (typeDocSnapshot.exists() && typeDocSnapshot.contains("categories")) {
-                List<String> categories = (List<String>) typeDocSnapshot.get("categories");
-
-                dataToShow.addAll(categories);
-            } else {
-                return generateResponse(
-                        404,
-                        LocalDateTime.now().toString(),
-                        "Categories not found!",
-                        null
-                );
-            }
-
-
-            return generateResponse(200, LocalDateTime.now().toString(), "Posts retrieved", dataToShow);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE RETRIEVING POSTS", null);
-        }
-    }
-
 
 }
 
