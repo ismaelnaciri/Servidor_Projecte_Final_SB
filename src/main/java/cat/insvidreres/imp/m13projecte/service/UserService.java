@@ -435,13 +435,13 @@ public class UserService implements Utils {
             collectionApiFuture.get().forEach((doc) -> {
                 if (Objects.equals(doc.get("email"), user.getEmail())
                         || Objects.equals(doc.get("password"), encryptedPassword)) {
+
                     dataToShow.add(doc.toObject(User.class));
                     System.out.println("found admin!!");
                 }
             });
 
             if (!dataToShow.isEmpty() && user != null) {
-                dataToShow.add(userToken.toString());
                 return generateResponse(
                         200,
                         LocalDateTime.now().toString(),

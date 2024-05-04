@@ -72,9 +72,15 @@ public class PostController {
     }
 
     @DeleteMapping("/deleteLikePostComment/{idPost}/{idComment}")
-    public JSONResponse deleteLikeComment(@RequestHeader("idToken") String idToken, @PathVariable String idPost, @PathVariable String idComment, @RequestParam("email") String email)  throws ExecutionException, InterruptedException {
+    public JSONResponse deleteLikeComment(@RequestHeader("idToken") String idToken, @PathVariable String idPost, @PathVariable String idComment, @RequestParam("email") String email) throws ExecutionException, InterruptedException {
 
         return postService.deleteLikeCommentPost( idToken, idPost, idComment, email);
+    }
+
+    @DeleteMapping("/deletePostComment/{idPost}/{idComment}")
+    public void deletePostComment(@RequestHeader("idToken") String idToken, @PathVariable String idPost, @PathVariable String idComment, @RequestParam("email") String email) throws ExecutionException, InterruptedException {
+
+
     }
 
 }

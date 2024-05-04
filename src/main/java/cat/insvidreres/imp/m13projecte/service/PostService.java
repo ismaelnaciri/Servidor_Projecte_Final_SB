@@ -415,6 +415,15 @@ public class PostService implements Utils {
         }
     }
 
+
+    public JSONResponse deletePostComment(String idToken, String idPost, String idComment) {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        List<Object> dataToShow = new ArrayList<>();
+        ApiFuture<QuerySnapshot> future = null;
+
+        checkIdToken(idToken);
+    }
+
 }
 
 
