@@ -64,10 +64,9 @@ public class UserService implements Utils {
                 conn.setRequestProperty("Content-Type", "application/json");
                 conn.setDoOutput(true);
 
-                String encryptedPassword = encryptPassword(user.getPassword(), SALT);
                 Map<String, Object> requestBody = new HashMap<>();
                 requestBody.put("email", user.getEmail());
-                requestBody.put("password", encryptedPassword);
+                requestBody.put("password", user.getPassword()); //Password for firebase auth
                 requestBody.put("displayName", user.getFirstName());
 //                    requestBody.put("idToken", jwtToFirebase);
                 requestBody.put("emailVerified", false);
@@ -103,9 +102,8 @@ public class UserService implements Utils {
                     try {
                         FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(response.getIdToken());
                         if (FirebaseAuth.getInstance().getUser(decodedToken.getUid()) != null) {
-                            dataToShow.add(response);
+                            System.out.println("User created with token | " + response.getIdToken());
                             currentToken = response.getIdToken();
-                            System.out.println("CURRENT TOKEN: " + currentToken);
                             System.out.println("User created in Auth correctly !!");
                         }
                     } catch (Exception e) {
@@ -169,12 +167,7 @@ public class UserService implements Utils {
 
 
                 try {
-                    user.setPassword(
-                            encryptPassword(
-                                    user.getPassword(),
-                                    Utils.SALT
-                            )
-                    );
+                    String encryptedPassword = encryptPassword(user.getPassword(), SALT);
 
                     user.setId(currentToken);
 
@@ -183,10 +176,11 @@ public class UserService implements Utils {
                     userToInsert.put("id", user.getId());
                     userToInsert.put("lastName", user.getLastName());
                     userToInsert.put("age", user.getAge());
-                    userToInsert.put("password", user.getPassword());
+                    userToInsert.put("password", encryptedPassword);
                     userToInsert.put("email", user.getEmail());
                     userToInsert.put("phoneNumber", user.getPhoneNumber());
                     userToInsert.put("img", user.getImg());
+                    userToInsert.put("friends", user.getFriends());
 
                     dataToShow.add(userToInsert);
                     dbFirestore.collection(CollectionName.USER.toString()).add(userToInsert);
@@ -441,7 +435,7 @@ public class UserService implements Utils {
             collectionApiFuture.get().forEach((doc) -> {
                 if (Objects.equals(doc.get("email"), user.getEmail())
                         || Objects.equals(doc.get("password"), encryptedPassword)) {
-                    dataToShow.add(doc);
+                    dataToShow.add(doc.toObject(User.class));
                     System.out.println("found admin!!");
                 }
             });

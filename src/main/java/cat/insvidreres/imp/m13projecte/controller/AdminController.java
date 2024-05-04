@@ -44,10 +44,10 @@ public class AdminController {
         return adminService.adminGetAllAuthUsers(idToken);
     }
 
-    @DeleteMapping("/admin/deleteUser")
-    public JSONResponse deleteUser(@RequestHeader("idToken") String idToken, @RequestBody User user) {
+    @DeleteMapping("/admin/deleteUser/{userId}")
+    public JSONResponse deleteUser(@RequestHeader("idToken") String idToken, @PathVariable("userId") String userId) {
 
-        return adminService.deleteUser(idToken, user);
+        return adminService.deleteUser(idToken, userId);
     }
 
 }

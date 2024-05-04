@@ -37,7 +37,7 @@ public class AdminService implements Utils {
             ListUsersPage listUsersPage = firebaseAuth.listUsers(null);
             for (UserRecord userRecord : listUsersPage.iterateAll()) {
 
-                collectionApiFuture = dbFirestore.collection(Utils.CollectionName.USER.toString()).get();
+                collectionApiFuture = dbFirestore.collection(Utils.CollectionName.USER.toString()).whereEqualTo("email", userRecord.getEmail()).get();
 
                 collectionApiFuture.get().forEach((doc) -> {
                     User user = new User(
@@ -52,9 +52,8 @@ public class AdminService implements Utils {
                             (List<User>) Objects.requireNonNull(doc.get("friends"))
                     );
 
+                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("id", userRecord.getUid());
                     dataToShow.add(user);
-//                    user.setId(userRecord.getUid());
-//                    user.setEmail(userRecord.getEmail());
                 });
             }
 
@@ -126,22 +125,29 @@ public class AdminService implements Utils {
     }
 
 
-    public JSONResponse deleteUser(String idToken, User user) {
+    public JSONResponse deleteUser(String idToken, String userId) {
         List<Object> dataToShow = new ArrayList<>();
         Firestore dbFirestore = FirestoreClient.getFirestore();
         ApiFuture<QuerySnapshot> collectionApiFuture;
 
         checkIdToken(idToken);
 
-        try {
-            collectionApiFuture = dbFirestore.collection(Utils.CollectionName.USER.toString()).whereEqualTo("id", user.getId()).get();
-            collectionApiFuture.get().forEach((doc) -> {
-               if (Objects.equals(doc.get("id"), user.getId())) {
-                   dbFirestore.collection(Utils.CollectionName.USER.toString()).document(doc.getId()).delete();
 
-                   dataToShow.add(doc);
+        try {
+            FirebaseAuth firebaseAuth = FirebaseAuth.getInstance();
+            UserRecord token = firebaseAuth.getUser(userId);
+            firebaseAuth.deleteUser(token.getUid());
+
+            collectionApiFuture = dbFirestore.collection(Utils.CollectionName.USER.toString()).whereEqualTo("id", userId).get();
+            collectionApiFuture.get().forEach((doc) -> {
+               if (Objects.equals(doc.get("email"), token.getEmail())) {
+                   dbFirestore.collection(Utils.CollectionName.USER.toString()).document(doc.getId()).delete();
+                   dataToShow.add(doc.toObject(User.class));
                }
             });
+
+            //TODO think of a way to get user's auth uid, right now i can only get the logged in uid
+
 
             if (!dataToShow.isEmpty()) {
                 return generateResponse(
