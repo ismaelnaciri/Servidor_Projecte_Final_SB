@@ -267,10 +267,13 @@ public class AdminService implements Utils {
 
         try {
             collectionApiFuture = dbFirestore.collection(CollectionName.POST.toString()).get();
+
             collectionApiFuture.get().forEach((doc) -> {
-               if (Objects.equals(doc.get("id"), idPost)) {
-                   dataToShow.add(doc);
+               if (Objects.equals(doc.get("id").toString().trim(), idPost.trim())) {
+                   System.out.println("Found post to delete.");
+                   dataToShow.add(doc.toObject(Post.class));
                    dbFirestore.collection(CollectionName.POST.toString()).document(doc.getId()).delete();
+                   System.out.println("Post deleted successfully!");
                }
             });
 

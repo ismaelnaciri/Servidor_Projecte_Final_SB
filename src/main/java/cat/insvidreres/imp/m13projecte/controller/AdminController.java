@@ -22,7 +22,7 @@ public class AdminController {
     @DeleteMapping("/admin/deletePost/{idPost}")
     public JSONResponse deletePost(@RequestHeader("idToken") String idToken, @PathVariable String idPost) {
 
-        return adminService.deletePost(idPost, idPost);
+        return adminService.deletePost(idToken, idPost);
     }
 
     @PostMapping("/admin/insertCategory")

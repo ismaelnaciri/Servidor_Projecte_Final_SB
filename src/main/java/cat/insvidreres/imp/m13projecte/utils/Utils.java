@@ -12,6 +12,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
@@ -84,9 +85,9 @@ public interface Utils {
 
 
     default JSONResponse checkIdToken(String idToken) {
+        List<Object> dataToShow = new ArrayList<>();
         try {
             FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
-            System.out.println("Token UID | " + token.getUid());
             if (token == null) {
                 return generateResponse(
                         401,
@@ -95,6 +96,15 @@ public interface Utils {
                         null
                 );
             }
+            //User auth uid :)
+            dataToShow.add(token.getUid());
+
+            return generateResponse(
+                    200,
+                    LocalDateTime.now().toString(),
+                    "Gotten Token successfully",
+                    dataToShow
+            );
         } catch (FirebaseAuthException e) {
             System.out.println("Error getting token | " + e.getMessage());
             generateResponse(
