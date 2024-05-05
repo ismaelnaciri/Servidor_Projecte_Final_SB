@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 
@@ -84,6 +85,15 @@ public class AdminService implements Utils {
         checkIdToken(idToken);
 
         try {
+            if (idToken == null || idToken.isEmpty()) {
+                return generateResponse(
+                        401,
+                        LocalDateTime.now().toString(),
+                        "Wrong token.",
+                        null
+                );
+            }
+
             String encryptedPassword = encryptPassword(user.getPassword(), SALT);
             System.out.println("encrypted password: " + encryptedPassword);
 
@@ -92,7 +102,7 @@ public class AdminService implements Utils {
                 if (Objects.equals(doc.get("email"), user.getEmail())
                 || Objects.equals(doc.get("password"), encryptedPassword)) {
                     user.setPassword(encryptedPassword);
-                    dataToShow.add(user);
+                    dataToShow.add(doc.toObject(User.class));
                     System.out.println("found admin!!");
                 }
             });
@@ -308,6 +318,42 @@ public class AdminService implements Utils {
                     "Error: " + e.getMessage(),
                     null
             );
+        }
+    }
+
+
+    public JSONResponse deletePostComment(String idToken, String idPost, String idComment) {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        List<Object> dataToShow = new ArrayList<>();
+        ApiFuture<QuerySnapshot> future = null;
+
+        checkIdToken(idToken);
+
+        try {
+            future = dbFirestore.collection(CollectionName.POST.toString()).whereEqualTo("id", idPost).get();
+            future.get().forEach((doc) -> {
+                Map<String, Object> postData = doc.getData();
+
+                List<Map<String, Object>> commentsList = (List<Map<String, Object>>) postData.getOrDefault("comments", new ArrayList<>());
+                for (Map<String, Object> comment : commentsList) {
+                    if (idComment.equals(comment.get("id"))) {
+                        dataToShow.add(comment);
+
+                        List<Map<String, Object>> tempList = commentsList;
+                        tempList.remove(comment);
+
+                        dbFirestore.collection(CollectionName.POST.toString()).document(doc.getId()).update("comments", tempList);
+                        System.out.println("COMMENT DELETED SUCCESSFULLY");
+                        break;
+                    }
+                }
+            });
+
+            return generateResponse(200, LocalDateTime.now().toString(), "Comment deleted successfully", dataToShow);
+        } catch (Exception e) {
+            System.out.println("Error | " + e.getMessage());
+            e.printStackTrace();
+            return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE DELETING COMMENT | " + e.getMessage(), null);
         }
     }
 

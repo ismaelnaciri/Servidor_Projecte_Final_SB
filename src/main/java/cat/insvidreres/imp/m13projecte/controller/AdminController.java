@@ -2,9 +2,13 @@ package cat.insvidreres.imp.m13projecte.controller;
 
 import cat.insvidreres.imp.m13projecte.entities.User;
 import cat.insvidreres.imp.m13projecte.service.AdminService;
+import cat.insvidreres.imp.m13projecte.service.PostService;
+import cat.insvidreres.imp.m13projecte.service.UserService;
 import cat.insvidreres.imp.m13projecte.utils.JSONResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.concurrent.ExecutionException;
 
 @RestController
 @RequestMapping(path = "/api", produces = "application/json")
@@ -48,6 +52,12 @@ public class AdminController {
     public JSONResponse deleteUser(@RequestHeader("idToken") String idToken, @PathVariable("userId") String userId) {
 
         return adminService.deleteUser(idToken, userId);
+    }
+
+    @DeleteMapping("/admin/deletePostComment/{idPost}/{idComment}")
+    public JSONResponse deletePostComment(@RequestHeader("idToken") String idToken, @PathVariable String idPost, @PathVariable String idComment) throws ExecutionException, InterruptedException {
+
+        return adminService.deletePostComment(idToken, idPost, idComment);
     }
 
 }
