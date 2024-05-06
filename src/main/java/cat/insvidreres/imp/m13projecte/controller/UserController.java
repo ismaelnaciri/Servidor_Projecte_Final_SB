@@ -45,7 +45,7 @@ public class UserController {
     @GetMapping("/user/friends")
     public JSONResponse getUserFriends(@RequestHeader("idToken") String idToken, @RequestParam("email") String email) throws ExecutionException, InterruptedException {
 
-        return userService.getUserDetails(email, idToken);
+        return userService.getUserDetails(idToken, email);
     }
 
     @DeleteMapping("/user/friends")

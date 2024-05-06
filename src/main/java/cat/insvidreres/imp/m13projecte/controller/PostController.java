@@ -42,7 +42,7 @@ public class PostController {
 
 
     @GetMapping("/userPosts")
-    public JSONResponse getUserPosts(@RequestHeader("idToken") String idToken, @RequestParam String email) throws ExecutionException, InterruptedException {
+    public JSONResponse getUserPosts(@RequestHeader("idToken") String idToken, @RequestParam("email") String email) throws ExecutionException, InterruptedException {
 
         return postService.getUserPosts(idToken, email);
     }

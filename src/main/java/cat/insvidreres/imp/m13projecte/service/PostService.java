@@ -119,25 +119,7 @@ public class PostService implements Utils {
         ApiFuture<QuerySnapshot> future = null;
         List<Object> dataToShow = new ArrayList<>();
 
-        try {
-            FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
-            if (token == null) {
-                return generateResponse(
-                        401,
-                        LocalDateTime.now().toString(),
-                        "User token not found!",
-                        null
-                );
-            }
-        } catch (FirebaseAuthException e) {
-            System.out.println("Error getting token | " + e.getMessage());
-            generateResponse(
-                    500,
-                    LocalDateTime.now().toString(),
-                    "Error getting token | " + e.getMessage(),
-                    null
-            );
-        }
+        checkIdToken(idToken);
 
         try {
 
