@@ -202,6 +202,7 @@ public class AdminService implements Utils {
 
                 dbFirestore.collection(CollectionName.CATEGORIES.toString()).document("Type").update("categories", categories);
 
+                System.out.println("Category added correctly");
                 return generateResponse(
                         200,
                         LocalDateTime.now().toString(),
@@ -246,6 +247,7 @@ public class AdminService implements Utils {
 
                 dbFirestore.collection(CollectionName.CATEGORIES.toString()).document("Type").update("categories", categories);
 
+                System.out.println("Category deleted correctly");
                 return generateResponse(
                         200,
                         LocalDateTime.now().toString(),
@@ -262,7 +264,94 @@ public class AdminService implements Utils {
             }
 
         } catch (Exception e) {
-            System.out.println("Error creating category | " + e.getMessage());
+            System.out.println("Error deleting category | " + e.getMessage());
+            e.printStackTrace();
+            return generateResponse(
+                    500,
+                    LocalDateTime.now().toString(),
+                    e.getMessage(),
+                    null
+            );
+        }
+    }
+
+
+    public JSONResponse updateCategory(String idToken, String updateValue, String category) {
+        List<Object> dataToShow = new ArrayList<>();
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<DocumentSnapshot> documentSnapshotApiFuture;
+
+        checkIdToken(idToken);
+
+        try {
+            documentSnapshotApiFuture = dbFirestore.collection(CollectionName.CATEGORIES.toString()).document("Type").get();
+            List<String> categories = (List<String>) documentSnapshotApiFuture.get().get("categories");
+            if (categories != null || !categories.isEmpty()) {
+                categories.set(categories.indexOf(category), updateValue);
+                dataToShow.add(categories);
+
+                dbFirestore.collection(CollectionName.CATEGORIES.toString()).document("Type").update("categories", categories);
+
+                System.out.println(categories);
+                System.out.println("Categories updated correctly.");
+                return generateResponse(
+                        200,
+                        LocalDateTime.now().toString(),
+                        "Category updated correctly!",
+                        dataToShow
+                );
+            } else {
+                return generateResponse(
+                        404,
+                        LocalDateTime.now().toString(),
+                        "Could not update category. Please contact admin.",
+                        null
+                );
+            }
+
+        } catch (Exception e) {
+            System.out.println("Error updating category | " + e.getMessage());
+            e.printStackTrace();
+            return generateResponse(
+                    500,
+                    LocalDateTime.now().toString(),
+                    e.getMessage(),
+                    null
+            );
+        }
+    }
+
+
+    public JSONResponse getAllCategories(String idToken) {
+        List<Object> dataToShow = new ArrayList<>();
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<DocumentSnapshot> documentSnapshotApiFuture;
+
+        checkIdToken(idToken);
+
+        try {
+            documentSnapshotApiFuture = dbFirestore.collection(CollectionName.CATEGORIES.toString()).document("Type").get();
+            List<String> categories = (List<String>) documentSnapshotApiFuture.get().get("categories");
+            if (categories != null || !categories.isEmpty()) {
+                dataToShow.add(categories);
+
+                return generateResponse(
+                        200,
+                        LocalDateTime.now().toString(),
+                        "Category retrieved correctly!",
+                        dataToShow
+                );
+            } else {
+                return generateResponse(
+                        404,
+                        LocalDateTime.now().toString(),
+                        "Could not get categories. Please contact admin.",
+                        null
+                );
+            }
+
+        } catch (Exception e) {
+            System.out.println("Error getting category | " + e.getMessage());
             e.printStackTrace();
             return generateResponse(
                     500,
@@ -356,5 +445,7 @@ public class AdminService implements Utils {
             return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE DELETING COMMENT | " + e.getMessage(), null);
         }
     }
+
+
 
 }

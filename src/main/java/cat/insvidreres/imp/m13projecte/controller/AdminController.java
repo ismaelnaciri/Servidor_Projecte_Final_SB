@@ -29,18 +29,6 @@ public class AdminController {
         return adminService.deletePost(idToken, idPost);
     }
 
-    @PostMapping("/admin/insertCategory")
-    public JSONResponse insertCategory(@RequestHeader("idToken") String idToken, @RequestBody String category) {
-
-        return adminService.addCategory(idToken, category);
-    }
-
-    @DeleteMapping("/admin/deleteCategory")
-    public JSONResponse deleteCategory(@RequestHeader("idToken") String idToken, @RequestBody String category) {
-
-        return adminService.deleteCategory(idToken, category);
-    }
-
 
     @GetMapping("/admin/getUsers")
     public JSONResponse getUsers(@RequestHeader("idToken") String idToken) {
@@ -59,5 +47,30 @@ public class AdminController {
 
         return adminService.deletePostComment(idToken, idPost, idComment);
     }
+
+    @GetMapping("/admin/getAllCategories")
+    public JSONResponse getAllCategories(@RequestHeader("idToken") String idToken) {
+
+        return adminService.getAllCategories(idToken);
+    }
+
+    @PostMapping("/admin/insertCategory")
+    public JSONResponse insertCategory(@RequestHeader("idToken") String idToken, @RequestBody String category) {
+
+        return adminService.addCategory(idToken, category);
+    }
+
+    @DeleteMapping("/admin/deleteCategory/{category}")
+    public JSONResponse deleteCategory(@RequestHeader("idToken") String idToken, @PathVariable String category) {
+
+        return adminService.deleteCategory(idToken, category);
+    }
+
+    @PutMapping("/admin/updateCategory/{category}")
+    public JSONResponse updateCategory(@RequestHeader("idToken") String idToken, @RequestBody String updateValue, @PathVariable String category) {
+
+        return adminService.updateCategory(idToken, updateValue, category);
+    }
+
 
 }
