@@ -328,7 +328,8 @@ public class UserService implements Utils {
         }
     }
 
-    public JSONResponse getUserDetails(String email, String idToken) throws ExecutionException, InterruptedException {
+
+    public JSONResponse addUserFriend(String idToken, String email, User userToAdd) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         ApiFuture<QuerySnapshot> collectionApiFuture = null;
         List<Object> dataToShow = new ArrayList<>();
@@ -338,14 +339,101 @@ public class UserService implements Utils {
         System.out.println("Email: " + email);
 
         try {
-            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
-
             collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
 
-//            if (collectionApiFuture.isDone()) {
             collectionApiFuture.get().forEach((doc) -> {
                 if (Objects.equals(doc.get("email"), email)) {
+                    User userToShow = doc.toObject(User.class);
 
+                    List<User> tempList = userToShow.getFriends();
+                    tempList.add(userToAdd);
+
+                    dataToShow.add(tempList);
+
+                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
+                    System.out.println("Friend added correctly!");
+                }
+            });
+
+            return generateResponse(
+                    200,
+                    LocalDateTime.now().toString(),
+                    "Friends added successfully!",
+                    dataToShow
+            );
+            //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
+
+        } catch (Exception e) {
+            return generateResponse(500,
+                    LocalDateTime.now().toString(),
+                    "Error in adding the friend. Please contact support for further infromation.",
+                    null);
+        }
+    }
+
+
+    public JSONResponse deleteUserFriend(String idToken, String email, String friendEmail) throws ExecutionException, InterruptedException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> collectionApiFuture = null;
+        List<Object> dataToShow = new ArrayList<>();
+
+        checkIdToken(idToken);
+
+        System.out.println("Email: " + email);
+
+        try {
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
+
+            collectionApiFuture.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("email"), email)) {
+                    User userToShow = doc.toObject(User.class);
+
+                    List<User> tempList = userToShow.getFriends();
+                    userToShow.getFriends().forEach((user) -> {
+                        if (Objects.equals(friendEmail, user.getEmail())) {
+                            tempList.remove(user);
+                        }
+                    });
+
+                    dataToShow.add(tempList);
+
+                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
+                    System.out.println("Friend eliminated correctly!");
+                }
+            });
+
+            return generateResponse(
+                    200,
+                    LocalDateTime.now().toString(),
+                    "Friends deleted successfully!",
+                    dataToShow
+            );
+            //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
+
+        } catch (Exception e) {
+            return generateResponse(500,
+                    LocalDateTime.now().toString(),
+                    "Error in deleting the friend. Please contact support for further infromation.",
+                    null);
+        }
+    }
+
+
+
+    public JSONResponse getUserDetails(String idToken, String email) throws ExecutionException, InterruptedException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> collectionApiFuture = null;
+        List<Object> dataToShow = new ArrayList<>();
+
+        checkIdToken(idToken);
+
+        System.out.println("Email: " + email);
+
+        try {
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
+
+            collectionApiFuture.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("email"), email)) {
                     User userToShow = doc.toObject(User.class);
                     dataToShow.add(userToShow);
                 }
@@ -437,7 +525,7 @@ public class UserService implements Utils {
                         || Objects.equals(doc.get("password"), encryptedPassword)) {
 
                     dataToShow.add(doc.toObject(User.class));
-                    System.out.println("found admin!!");
+                    System.out.println("found user!!");
                 }
             });
 

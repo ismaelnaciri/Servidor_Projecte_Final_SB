@@ -43,19 +43,31 @@ public class UserController {
     }
 
     @GetMapping("/user/friends")
-    public JSONResponse getUserFriends(@RequestHeader("idToken") String idToken, @RequestParam String email) throws ExecutionException, InterruptedException {
+    public JSONResponse getUserFriends(@RequestHeader("idToken") String idToken, @RequestParam("email") String email) throws ExecutionException, InterruptedException {
 
         return userService.getUserDetails(email, idToken);
+    }
+
+    @DeleteMapping("/user/friends")
+    public JSONResponse deleteFriendFromUser(@RequestHeader("idToken") String idToken, @RequestParam("email") String email, @RequestParam String friendEmail) throws ExecutionException, InterruptedException {
+
+        return userService.deleteUserFriend(idToken, email, friendEmail);
+    }
+
+    @PostMapping("/user/friends")
+    public JSONResponse addFriendToUser(@RequestHeader("idToken") String idToken, @RequestParam String email, @RequestBody User user) throws ExecutionException, InterruptedException {
+
+        return userService.addUserFriend(idToken, email, user);
     }
 
 
     @GetMapping("/user")
-    public JSONResponse getUser(@RequestParam String email, @RequestHeader("idToken") String idToken) throws ExecutionException, InterruptedException {
+    public JSONResponse getUser(@RequestHeader("idToken") String idToken, @RequestParam("email") String email) throws ExecutionException, InterruptedException {
 
-        return userService.getUserDetails(email, idToken);
+        return userService.getUserDetails(idToken, email);
     }
 
-    //Change to "/user/{firstName}"
+
     @PutMapping("/users")
     public JSONResponse updateUser(@RequestBody User user, @RequestHeader("idToken") String idToken) throws ExecutionException, InterruptedException {
 

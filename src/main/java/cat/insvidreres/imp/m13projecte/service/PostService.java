@@ -285,14 +285,16 @@ public class PostService implements Utils {
 
                 List<String> likesList = (List<String>) postData.getOrDefault("likes", new ArrayList<>());
 
-                if (!likesList.contains(email.split("\"")[1])) {
-                    System.out.println("email | " + email.split("\"")[1]);
-                    likesList.add(email.split("\"")[1]);
-                }
+                System.out.println("Email received from client " + email);
+//                if (!likesList.contains(email.split("\"")[1])) {
+//                    System.out.println("email | " + email.split("\"")[1]);
+//                    likesList.add(email.split("\"")[1]);
+//                }
+                likesList.add(email);
                 System.out.println(likesList);
 
                 dbFirestore.collection("posts").document(doc.getId()).update("likes", likesList);
-                dataToShow.add(postData);
+                dataToShow.add(likesList);
                 System.out.println("LIKE INSERTED SUCCESSFULLY");
 
             });
@@ -324,7 +326,7 @@ public class PostService implements Utils {
                 System.out.println(likesList);
 
                 dbFirestore.collection("posts").document(doc.getId()).update("likes", likesList);
-                dataToShow.add(postData);
+                dataToShow.add(likesList);
                 System.out.println("LIKE REMOVED SUCCESSFULLY");
 
             });
@@ -343,6 +345,9 @@ public class PostService implements Utils {
         List<Object> dataToShow = new ArrayList<>();
         ApiFuture<QuerySnapshot> future = null;
 
+
+        System.out.println("idToken received | " + idToken);
+
         checkIdToken(idToken);
 
         try {
@@ -356,7 +361,8 @@ public class PostService implements Utils {
                 for (Map<String, Object> comment : commentsList) {
                     if (idComment.equals(comment.get("id"))) {
                         List<String> likesList = (List<String>) comment.getOrDefault("likes", new ArrayList<>());
-                        likesList.add(email.split("\"")[1]);
+//                        likesList.add(email.split("\"")[1]);
+                        likesList.add(email);
                         comment.remove("likes");
                         comment.put("likes", likesList);
                         break;
@@ -364,7 +370,7 @@ public class PostService implements Utils {
                 }
 
                 dbFirestore.collection("posts").document(doc.getId()).update("comments", commentsList);
-                dataToShow.add(postData);
+                dataToShow.add(commentsList);
 
                 System.out.println("COMMENT LIKE ADDED SUCCESSFULLY");
             });
@@ -403,7 +409,7 @@ public class PostService implements Utils {
                 }
 
                 dbFirestore.collection("posts").document(doc.getId()).update("comments", commentsList);
-                dataToShow.add(postData);
+                dataToShow.add(commentsList);
 
                 System.out.println("COMMENT LIKE DELETED SUCCESSFULLY");
             });
