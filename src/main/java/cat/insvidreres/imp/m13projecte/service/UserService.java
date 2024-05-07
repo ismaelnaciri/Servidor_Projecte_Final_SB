@@ -30,6 +30,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.lang.Integer.parseInt;
+import static java.lang.Integer.sum;
 
 @Service
 public class UserService implements Utils {
@@ -351,8 +352,25 @@ public class UserService implements Utils {
                     dataToShow.add(tempList);
 
                     dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
-                    System.out.println("Friend added correctly!");
+                    System.out.printf("\nFriend added correctly to %s!", email);
                 }
+            });
+
+            JSONResponse userDetailsJSON = getUserDetails(idToken, email);
+            User tempUser = (User) userDetailsJSON.getData().get(0);
+            System.out.println("User to also add gotten? " + tempUser.getEmail());
+
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", userToAdd.getEmail()).get();
+            collectionApiFuture.get().forEach((doc) -> {
+               if (Objects.equals(doc.get("email"), userToAdd.getEmail())) {
+                   User userToShow = doc.toObject(User.class);
+
+                   List<User> tempList = userToShow.getFriends();
+                   tempList.add(tempUser);
+
+                   dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
+                   System.out.printf("\nFriend also added correctly to %s!", tempUser.getEmail());
+               }
             });
 
             return generateResponse(
@@ -387,18 +405,42 @@ public class UserService implements Utils {
             collectionApiFuture.get().forEach((doc) -> {
                 if (Objects.equals(doc.get("email"), email)) {
                     User userToShow = doc.toObject(User.class);
-
                     List<User> tempList = userToShow.getFriends();
-                    userToShow.getFriends().forEach((user) -> {
+
+                    for (User user : tempList) {
                         if (Objects.equals(friendEmail, user.getEmail())) {
                             tempList.remove(user);
+                            System.out.println("hi?");
+                            break;
                         }
-                    });
+                    }
 
                     dataToShow.add(tempList);
 
                     dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
-                    System.out.println("Friend eliminated correctly!");
+                    System.out.printf("\nFriend eliminated correctly to %s !", email);
+                }
+            });
+
+            JSONResponse userDetailsJSON = getUserDetails(idToken, email);
+            User tempUser = (User) userDetailsJSON.getData().get(0);
+
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", friendEmail).get();
+            collectionApiFuture.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("email"), friendEmail)) {
+                    User userToShow = doc.toObject(User.class);
+
+                    List<User> tempList = userToShow.getFriends();
+                    for (User user : tempList) {
+                        if (Objects.equals(tempUser.getEmail(), user.getEmail())) {
+                            tempList.remove(user);
+                            System.out.println("bomba?");
+                            break;
+                        }
+                    }
+
+                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
+                    System.out.printf("\nFriend also deleted correctly to %s!", friendEmail);
                 }
             });
 
@@ -411,6 +453,8 @@ public class UserService implements Utils {
             //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
 
         } catch (Exception e) {
+            System.out.println("Error | " + e.getMessage());
+            e.printStackTrace();
             return generateResponse(500,
                     LocalDateTime.now().toString(),
                     "Error in deleting the friend. Please contact support for further infromation.",

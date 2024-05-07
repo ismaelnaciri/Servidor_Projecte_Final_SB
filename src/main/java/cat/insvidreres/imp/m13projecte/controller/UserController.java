@@ -49,13 +49,13 @@ public class UserController {
     }
 
     @DeleteMapping("/user/friends")
-    public JSONResponse deleteFriendFromUser(@RequestHeader("idToken") String idToken, @RequestParam("email") String email, @RequestParam String friendEmail) throws ExecutionException, InterruptedException {
+    public JSONResponse deleteFriendFromUser(@RequestHeader("idToken") String idToken, @RequestParam("email") String email, @RequestParam("friendEmail") String friendEmail) throws ExecutionException, InterruptedException {
 
         return userService.deleteUserFriend(idToken, email, friendEmail);
     }
 
     @PostMapping("/user/friends")
-    public JSONResponse addFriendToUser(@RequestHeader("idToken") String idToken, @RequestParam String email, @RequestBody User user) throws ExecutionException, InterruptedException {
+    public JSONResponse addFriendToUser(@RequestHeader("idToken") String idToken, @RequestParam("email") String email, @RequestBody User user) throws ExecutionException, InterruptedException {
 
         return userService.addUserFriend(idToken, email, user);
     }
