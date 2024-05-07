@@ -60,6 +60,19 @@ public class UserController {
         return userService.addUserFriend(idToken, email, user);
     }
 
+    @PostMapping("/user/follow")
+    public JSONResponse addFollowerToUser(@RequestHeader("idToken") String idToken, @RequestBody User user, @RequestParam("email") String email) throws ExecutionException, InterruptedException {
+
+        return userService.addFollowerToUser(idToken, user, email);
+    }
+
+
+    @DeleteMapping("/user/follow")
+    public JSONResponse deleteFollowerToUser(@RequestHeader("idToken") String idToken, @RequestParam("email") String email, @RequestParam("userEmail") String userEmail) throws ExecutionException, InterruptedException {
+
+        return userService.deleteFollowerToUser(idToken, email, userEmail);
+    }
+
 
     @GetMapping("/user")
     public JSONResponse getUser(@RequestHeader("idToken") String idToken, @RequestParam("email") String email) throws ExecutionException, InterruptedException {

@@ -329,6 +329,142 @@ public class UserService implements Utils {
         }
     }
 
+    public JSONResponse addFollowerToUser(String idToken, User user, String email) {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> collectionApiFuture = null;
+        List<Object> dataToShow = new ArrayList<>();
+
+        checkIdToken(idToken);
+
+        //First add user into following list
+        try {
+
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
+
+            collectionApiFuture.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("email"), email)) {
+                    User docUser = doc.toObject(User.class);
+
+                    List<User> tempList = docUser.getFollowing();
+                    tempList.add(user);
+
+                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("following", tempList);
+                    System.out.println("User added to following correctly");
+                }
+            });
+
+
+            //Then get user object with getDetails
+            //Finally get doc where email == user.getEmail()
+            JSONResponse userDetailsJSON = getUserDetails(idToken, email);
+            User tempUser = (User) userDetailsJSON.getData().get(0);
+
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", user.getEmail()).get();
+            collectionApiFuture.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("email"), user.getEmail())) {
+                    User docUser = doc.toObject(User.class);
+
+                    List<User> tempList = docUser.getFollowers();
+                    tempList.add(tempUser);
+
+                    dataToShow.add(tempList);
+
+                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("followers", tempList);
+                    System.out.println("User added to follower correctly");
+                }
+            });
+
+            return generateResponse(
+                    200,
+                    LocalDateTime.now().toString(),
+                    "Followed Correctly!",
+                    dataToShow
+            );
+
+        } catch (Exception e) {
+            System.out.println("Error | " + e.getMessage());
+            e.printStackTrace();
+            return generateResponse(500,
+                    LocalDateTime.now().toString(),
+                    "Error in adding the friend. Please contact support for further infromation.",
+                    null);
+        }
+    }
+
+
+    public JSONResponse deleteFollowerToUser(String idToken, String email, String userEmail) {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> collectionApiFuture = null;
+        List<Object> dataToShow = new ArrayList<>();
+
+        checkIdToken(idToken);
+
+        //First add user into following list
+        try {
+
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
+
+            collectionApiFuture.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("email"), email)) {
+                    User docUser = doc.toObject(User.class);
+
+                    List<User> tempList = docUser.getFollowing();
+                    for (User user : tempList) {
+                        if (Objects.equals(user.getEmail(), userEmail)) {
+                            tempList.remove(user);
+                            System.out.println("hi?");
+                            break;
+                        }
+                    }
+
+                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("following", tempList);
+                    System.out.println("Unfollowed correctly");
+                }
+            });
+
+
+            //Then get user object with getDetails
+            //Finally get doc where email == user.getEmail()
+
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", userEmail).get();
+            collectionApiFuture.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("email"), userEmail)) {
+                    User docUser = doc.toObject(User.class);
+
+                    List<User> tempList = docUser.getFollowers();
+
+                    for (User user: tempList) {
+                        if (Objects.equals(user.getEmail(), email)) {
+                            tempList.remove(user);
+                            System.out.println("bomba?");
+                            break;
+                        }
+                    }
+
+                    dataToShow.add(tempList);
+
+                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("followers", tempList);
+                    System.out.println("User removed follower correctly");
+                }
+            });
+
+            return generateResponse(
+                    200,
+                    LocalDateTime.now().toString(),
+                    "Followed Correctly!",
+                    dataToShow
+            );
+
+        } catch (Exception e) {
+            System.out.println("Error | " + e.getMessage());
+            e.printStackTrace();
+            return generateResponse(500,
+                    LocalDateTime.now().toString(),
+                    "Error in adding the friend. Please contact support for further infromation.",
+                    null);
+        }
+    }
+
 
     public JSONResponse addUserFriend(String idToken, String email, User userToAdd) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
@@ -382,6 +518,8 @@ public class UserService implements Utils {
             //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
 
         } catch (Exception e) {
+            System.out.println("Error | " + e.getMessage());
+            e.printStackTrace();
             return generateResponse(500,
                     LocalDateTime.now().toString(),
                     "Error in adding the friend. Please contact support for further infromation.",
@@ -410,7 +548,6 @@ public class UserService implements Utils {
                     for (User user : tempList) {
                         if (Objects.equals(friendEmail, user.getEmail())) {
                             tempList.remove(user);
-                            System.out.println("hi?");
                             break;
                         }
                     }
@@ -434,7 +571,6 @@ public class UserService implements Utils {
                     for (User user : tempList) {
                         if (Objects.equals(tempUser.getEmail(), user.getEmail())) {
                             tempList.remove(user);
-                            System.out.println("bomba?");
                             break;
                         }
                     }

@@ -50,7 +50,9 @@ public class AdminService implements Utils {
                             Integer.parseInt(Objects.requireNonNull(doc.get("age")).toString()),
                             userRecord.getPhoneNumber(),
                             Objects.requireNonNull(doc.get("img")).toString(),
-                            (List<User>) Objects.requireNonNull(doc.get("friends"))
+                            (List<User>) Objects.requireNonNull(doc.get("friends")),
+                            (List<User>) Objects.requireNonNull(doc.get("followers")),
+                            (List<User>) Objects.requireNonNull(doc.get("following"))
                     );
 
                     dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("id", userRecord.getUid());
