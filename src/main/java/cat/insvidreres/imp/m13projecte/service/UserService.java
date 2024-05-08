@@ -11,38 +11,29 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
-import com.google.cloud.storage.Bucket;
 import com.google.cloud.storage.StorageOptions;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseAuthException;
-import com.google.firebase.auth.FirebaseToken;
-import com.google.firebase.auth.UserRecord;
+import com.google.firebase.auth.*;
 import com.google.firebase.cloud.FirestoreClient;
 //import com.google.firestore.v1.WriteResult;
 import com.google.cloud.firestore.*;
-import com.google.firebase.cloud.StorageClient;
 import com.google.gson.Gson;
 import org.springframework.stereotype.Service;
 
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static java.lang.Integer.parseInt;
+import static java.lang.Integer.sum;
+
 @Service
 public class UserService implements Utils {
-    private static final String COLLECTION_NAME = "users";
     private static String currentToken = "";
 
 
@@ -74,10 +65,9 @@ public class UserService implements Utils {
                 conn.setRequestProperty("Content-Type", "application/json");
                 conn.setDoOutput(true);
 
-//            String encryptedPassword = encryptPassword(user.getPassword(), SALT);
                 Map<String, Object> requestBody = new HashMap<>();
                 requestBody.put("email", user.getEmail());
-                requestBody.put("password", user.getPassword());
+                requestBody.put("password", user.getPassword()); //Password for firebase auth
                 requestBody.put("displayName", user.getFirstName());
 //                    requestBody.put("idToken", jwtToFirebase);
                 requestBody.put("emailVerified", false);
@@ -113,9 +103,8 @@ public class UserService implements Utils {
                     try {
                         FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(response.getIdToken());
                         if (FirebaseAuth.getInstance().getUser(decodedToken.getUid()) != null) {
-                            dataToShow.add(response);
+                            System.out.println("User created with token | " + response.getIdToken());
                             currentToken = response.getIdToken();
-                            System.out.println("CURRENT TOKEN: " + currentToken);
                             System.out.println("User created in Auth correctly !!");
                         }
                     } catch (Exception e) {
@@ -179,12 +168,7 @@ public class UserService implements Utils {
 
 
                 try {
-                    user.setPassword(
-                            encryptPassword(
-                                    user.getPassword(),
-                                    Utils.SALT
-                            )
-                    );
+                    String encryptedPassword = encryptPassword(user.getPassword(), SALT);
 
                     user.setId(currentToken);
 
@@ -193,10 +177,11 @@ public class UserService implements Utils {
                     userToInsert.put("id", user.getId());
                     userToInsert.put("lastName", user.getLastName());
                     userToInsert.put("age", user.getAge());
-                    userToInsert.put("password", user.getPassword());
+                    userToInsert.put("password", encryptedPassword);
                     userToInsert.put("email", user.getEmail());
                     userToInsert.put("phoneNumber", user.getPhoneNumber());
                     userToInsert.put("img", user.getImg());
+                    userToInsert.put("friends", user.getFriends());
 
                     dataToShow.add(userToInsert);
                     dbFirestore.collection(CollectionName.USER.toString()).add(userToInsert);
@@ -233,6 +218,8 @@ public class UserService implements Utils {
         ApiFuture<QuerySnapshot> collectionApiFuture = null;
         List<Object> dataToShow = new ArrayList<>();
 
+        checkIdToken(idToken);
+
         try {
 
             collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
@@ -247,24 +234,12 @@ public class UserService implements Utils {
                 });
             }
 
-            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
-
-            if (userToken != null) {
-                dataToShow.add(userToken);
-                return generateResponse(
-                        200,
-                        LocalDateTime.now().toString(),
-                        "User deleted successfully!",
-                        dataToShow
-                );
-            } else {
-                return generateResponse(
-                        404,
-                        LocalDateTime.now().toString(),
-                        "User token not found!",
-                        null
-                );
-            }
+            return generateResponse(
+                    200,
+                    LocalDateTime.now().toString(),
+                    "User deleted successfully!",
+                    dataToShow
+            );
 
         } catch (Exception e) {
             System.out.println("ERROR DELETING USER | " + e.getMessage());
@@ -280,6 +255,8 @@ public class UserService implements Utils {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         ApiFuture<QuerySnapshot> collectionApiFuture = null;
         List<Object> dataToShow = new ArrayList<>();
+
+        checkIdToken(idToken);
 
 
         try {
@@ -325,25 +302,13 @@ public class UserService implements Utils {
                         dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update(updates);
                     }
                 });
-                FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
 
-                //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
-                if (userToken != null) {
-                    dataToShow.add(userToken);
-                    return generateResponse(
-                            200,
-                            LocalDateTime.now().toString(),
-                            "User logged in successfully!",
-                            dataToShow
-                    );
-                } else {
-                    return generateResponse(
-                            404,
-                            LocalDateTime.now().toString(),
-                            "User token not found!",
-                            null
-                    );
-                }
+                return generateResponse(
+                        200,
+                        LocalDateTime.now().toString(),
+                        "User logged in successfully!",
+                        dataToShow
+                );
 
             } else {
                 return generateResponse(
@@ -364,45 +329,303 @@ public class UserService implements Utils {
         }
     }
 
-    public JSONResponse getUserDetails(String email, String idToken) throws ExecutionException, InterruptedException {
+    public JSONResponse addFollowerToUser(String idToken, User user, String email) {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         ApiFuture<QuerySnapshot> collectionApiFuture = null;
         List<Object> dataToShow = new ArrayList<>();
 
-        System.out.println("Email: " + email);
+        checkIdToken(idToken);
 
-
+        //First add user into following list
         try {
-            FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
 
             collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
 
-//            if (collectionApiFuture.isDone()) {
             collectionApiFuture.get().forEach((doc) -> {
                 if (Objects.equals(doc.get("email"), email)) {
+                    User docUser = doc.toObject(User.class);
 
+                    List<User> tempList = docUser.getFollowing();
+                    tempList.add(user);
+
+                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("following", tempList);
+                    System.out.println("User added to following correctly");
+                }
+            });
+
+
+            //Then get user object with getDetails
+            //Finally get doc where email == user.getEmail()
+            JSONResponse userDetailsJSON = getUserDetails(idToken, email);
+            User tempUser = (User) userDetailsJSON.getData().get(0);
+
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", user.getEmail()).get();
+            collectionApiFuture.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("email"), user.getEmail())) {
+                    User docUser = doc.toObject(User.class);
+
+                    List<User> tempList = docUser.getFollowers();
+                    tempList.add(tempUser);
+
+                    dataToShow.add(tempList);
+
+                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("followers", tempList);
+                    System.out.println("User added to follower correctly");
+                }
+            });
+
+            return generateResponse(
+                    200,
+                    LocalDateTime.now().toString(),
+                    "Followed Correctly!",
+                    dataToShow
+            );
+
+        } catch (Exception e) {
+            System.out.println("Error | " + e.getMessage());
+            e.printStackTrace();
+            return generateResponse(500,
+                    LocalDateTime.now().toString(),
+                    "Error in adding the friend. Please contact support for further infromation.",
+                    null);
+        }
+    }
+
+
+    public JSONResponse deleteFollowerToUser(String idToken, String email, String userEmail) {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> collectionApiFuture = null;
+        List<Object> dataToShow = new ArrayList<>();
+
+        checkIdToken(idToken);
+
+        //First add user into following list
+        try {
+
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
+
+            collectionApiFuture.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("email"), email)) {
+                    User docUser = doc.toObject(User.class);
+
+                    List<User> tempList = docUser.getFollowing();
+                    for (User user : tempList) {
+                        if (Objects.equals(user.getEmail(), userEmail)) {
+                            tempList.remove(user);
+                            System.out.println("hi?");
+                            break;
+                        }
+                    }
+
+                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("following", tempList);
+                    System.out.println("Unfollowed correctly");
+                }
+            });
+
+
+            //Then get user object with getDetails
+            //Finally get doc where email == user.getEmail()
+
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", userEmail).get();
+            collectionApiFuture.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("email"), userEmail)) {
+                    User docUser = doc.toObject(User.class);
+
+                    List<User> tempList = docUser.getFollowers();
+
+                    for (User user: tempList) {
+                        if (Objects.equals(user.getEmail(), email)) {
+                            tempList.remove(user);
+                            System.out.println("bomba?");
+                            break;
+                        }
+                    }
+
+                    dataToShow.add(tempList);
+
+                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("followers", tempList);
+                    System.out.println("User removed follower correctly");
+                }
+            });
+
+            return generateResponse(
+                    200,
+                    LocalDateTime.now().toString(),
+                    "Followed Correctly!",
+                    dataToShow
+            );
+
+        } catch (Exception e) {
+            System.out.println("Error | " + e.getMessage());
+            e.printStackTrace();
+            return generateResponse(500,
+                    LocalDateTime.now().toString(),
+                    "Error in adding the friend. Please contact support for further infromation.",
+                    null);
+        }
+    }
+
+
+    public JSONResponse addUserFriend(String idToken, String email, User userToAdd) throws ExecutionException, InterruptedException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> collectionApiFuture = null;
+        List<Object> dataToShow = new ArrayList<>();
+
+        checkIdToken(idToken);
+
+        System.out.println("Email: " + email);
+
+        try {
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
+
+            collectionApiFuture.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("email"), email)) {
+                    User userToShow = doc.toObject(User.class);
+
+                    List<User> tempList = userToShow.getFriends();
+                    tempList.add(userToAdd);
+
+                    dataToShow.add(tempList);
+
+                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
+                    System.out.printf("\nFriend added correctly to %s!", email);
+                }
+            });
+
+            JSONResponse userDetailsJSON = getUserDetails(idToken, email);
+            User tempUser = (User) userDetailsJSON.getData().get(0);
+            System.out.println("User to also add gotten? " + tempUser.getEmail());
+
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", userToAdd.getEmail()).get();
+            collectionApiFuture.get().forEach((doc) -> {
+               if (Objects.equals(doc.get("email"), userToAdd.getEmail())) {
+                   User userToShow = doc.toObject(User.class);
+
+                   List<User> tempList = userToShow.getFriends();
+                   tempList.add(tempUser);
+
+                   dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
+                   System.out.printf("\nFriend also added correctly to %s!", tempUser.getEmail());
+               }
+            });
+
+            return generateResponse(
+                    200,
+                    LocalDateTime.now().toString(),
+                    "Friends added successfully!",
+                    dataToShow
+            );
+            //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
+
+        } catch (Exception e) {
+            System.out.println("Error | " + e.getMessage());
+            e.printStackTrace();
+            return generateResponse(500,
+                    LocalDateTime.now().toString(),
+                    "Error in adding the friend. Please contact support for further infromation.",
+                    null);
+        }
+    }
+
+
+    public JSONResponse deleteUserFriend(String idToken, String email, String friendEmail) throws ExecutionException, InterruptedException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> collectionApiFuture = null;
+        List<Object> dataToShow = new ArrayList<>();
+
+        checkIdToken(idToken);
+
+        System.out.println("Email: " + email);
+
+        try {
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
+
+            collectionApiFuture.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("email"), email)) {
+                    User userToShow = doc.toObject(User.class);
+                    List<User> tempList = userToShow.getFriends();
+
+                    for (User user : tempList) {
+                        if (Objects.equals(friendEmail, user.getEmail())) {
+                            tempList.remove(user);
+                            break;
+                        }
+                    }
+
+                    dataToShow.add(tempList);
+
+                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
+                    System.out.printf("\nFriend eliminated correctly to %s !", email);
+                }
+            });
+
+            JSONResponse userDetailsJSON = getUserDetails(idToken, email);
+            User tempUser = (User) userDetailsJSON.getData().get(0);
+
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", friendEmail).get();
+            collectionApiFuture.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("email"), friendEmail)) {
+                    User userToShow = doc.toObject(User.class);
+
+                    List<User> tempList = userToShow.getFriends();
+                    for (User user : tempList) {
+                        if (Objects.equals(tempUser.getEmail(), user.getEmail())) {
+                            tempList.remove(user);
+                            break;
+                        }
+                    }
+
+                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
+                    System.out.printf("\nFriend also deleted correctly to %s!", friendEmail);
+                }
+            });
+
+            return generateResponse(
+                    200,
+                    LocalDateTime.now().toString(),
+                    "Friends deleted successfully!",
+                    dataToShow
+            );
+            //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
+
+        } catch (Exception e) {
+            System.out.println("Error | " + e.getMessage());
+            e.printStackTrace();
+            return generateResponse(500,
+                    LocalDateTime.now().toString(),
+                    "Error in deleting the friend. Please contact support for further infromation.",
+                    null);
+        }
+    }
+
+
+
+    public JSONResponse getUserDetails(String idToken, String email) throws ExecutionException, InterruptedException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> collectionApiFuture = null;
+        List<Object> dataToShow = new ArrayList<>();
+
+        checkIdToken(idToken);
+
+        System.out.println("Email: " + email);
+
+        try {
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
+
+            collectionApiFuture.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("email"), email)) {
                     User userToShow = doc.toObject(User.class);
                     dataToShow.add(userToShow);
                 }
             });
 
-
+            return generateResponse(
+                    200,
+                    LocalDateTime.now().toString(),
+                    "User data gotten successfully!",
+                    dataToShow
+            );
             //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
-            if (userToken != null) {
-
-                return generateResponse(
-                        200,
-                        LocalDateTime.now().toString(),
-                        "User data gotten successfully!",
-                        dataToShow
-                );
-            } else {
-                return generateResponse(403,
-                        LocalDateTime.now().toString(),
-                        "Wrong email. Check again.",
-                        null
-                );
-            }
 
         } catch (Exception e) {
             return generateResponse(500,
@@ -412,67 +635,12 @@ public class UserService implements Utils {
         }
     }
 
-    public JSONResponse testSaltHashGet(String email, String password) throws ExecutionException, InterruptedException, NoSuchAlgorithmException {
-        Firestore dbFirestore = FirestoreClient.getFirestore();
-        ApiFuture<QuerySnapshot> collectionApiFuture = null;
-        List<Object> dataToShow = new ArrayList<>();
-
-        AtomicReference<String> paramPW = new AtomicReference<>("");
-
-
-        try {
-            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
-
-            if (collectionApiFuture.isDone()) {
-                collectionApiFuture.get().forEach((doc) -> {
-                    if (Objects.equals(doc.get("email"), email)) {
-                        String salt = Utils.SALT;
-
-                        try {
-                            paramPW.set(encryptPassword(password, salt));
-
-                            System.out.println("doc EXISTS in test :)");
-
-                            String pw = Objects.requireNonNull(doc.get("password")).toString();
-                            pw = encryptPassword(pw, salt);
-
-                            System.out.println("pw from doc  |  " + pw);
-                            if (Objects.equals(pw, paramPW.get())) {
-                                dataToShow.add(doc.toObject(User.class));
-
-                            }
-                        } catch (NoSuchAlgorithmException e) {
-                            generateResponse(500,
-                                    LocalDateTime.now().toString(),
-                                    e.getMessage(),
-                                    null);
-                        }
-                    }
-                });
-
-                return generateResponse(200,
-                        LocalDateTime.now().toString(),
-                        "User gotten with hash correctly",
-                        dataToShow);
-
-            }
-        } catch (Exception e) {
-            return generateResponse(500,
-                    LocalDateTime.now().toString(),
-                    e.getMessage(),
-                    null);
-        }
-
-
-        return generateResponse(420,
-                LocalDateTime.now().toString(),
-                "Thrown in saltHashGet, look into it",
-                null);
-    }
 
     public JSONResponse getUsers(String idToken) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         List<Object> dataToShow = new ArrayList<>();
+
+        checkIdToken(idToken);
 
         try {
             Iterable<DocumentReference> documentReference = dbFirestore.collection(CollectionName.USER.toString()).listDocuments();
@@ -490,21 +658,11 @@ public class UserService implements Utils {
                 }
                 FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
 
+                return generateResponse(200,
+                        LocalDateTime.now().toString(),
+                        "Users retreived correctly.",
+                        dataToShow);
                 //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
-                if (userToken != null) {
-                    dataToShow.add(userToken);
-                    return generateResponse(200,
-                            LocalDateTime.now().toString(),
-                            "Users retreived correctly.",
-                            dataToShow);
-                } else {
-                    return generateResponse(
-                            403,
-                            LocalDateTime.now().toString(),
-                            "Error verifying user Token",
-                            null
-                    );
-                }
 
             }
         } catch (Exception e) {
@@ -521,24 +679,13 @@ public class UserService implements Utils {
                 null);
     }
 
-    public JSONResponse login(String idToken) {
-        try {
-            return signInWithEmailAndPassword(idToken);
 
-        } catch (Exception e) {
-            return generateResponse(
-                    500,
-                    LocalDateTime.now().toString(),
-                    e.getMessage(),
-                    null
-            );
-        }
-    }
-
-    public JSONResponse signInWithEmailAndPassword(String idToken) {
+    public JSONResponse login(String idToken, User user) throws ExecutionException, InterruptedException {
         List<Object> dataToShow = new ArrayList<>();
-        try {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> collectionApiFuture;
 
+        try {
             if (idToken == null || idToken.isEmpty()) {
                 return generateResponse(
                         401,
@@ -550,11 +697,19 @@ public class UserService implements Utils {
 
             System.out.println("TOKEN   |  " + idToken);
             FirebaseToken userToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+            String encryptedPassword = encryptPassword(user.getPassword(), SALT);
 
-            //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
-            if (userToken != null) {
-                currentToken = idToken;
-                dataToShow.add(userToken);
+            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", user.getEmail()).get();
+            collectionApiFuture.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("email"), user.getEmail())
+                        || Objects.equals(doc.get("password"), encryptedPassword)) {
+
+                    dataToShow.add(doc.toObject(User.class));
+                    System.out.println("found user!!");
+                }
+            });
+
+            if (!dataToShow.isEmpty() && user != null) {
                 return generateResponse(
                         200,
                         LocalDateTime.now().toString(),
@@ -565,7 +720,7 @@ public class UserService implements Utils {
                 return generateResponse(
                         404,
                         LocalDateTime.now().toString(),
-                        "Error getting user token ",
+                        "Error getting user token",
                         null
                 );
             }
@@ -585,25 +740,7 @@ public class UserService implements Utils {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         ApiFuture<QuerySnapshot> future;
 
-        try {
-            FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
-            if (token == null) {
-                return generateResponse(
-                        401,
-                        LocalDateTime.now().toString(),
-                        "User token not found!",
-                        null
-                );
-            }
-        } catch (FirebaseAuthException e) {
-            e.printStackTrace();
-            return generateResponse(
-                    500,
-                    LocalDateTime.now().toString(),
-                    "Error getting token | " + e.getMessage(),
-                    null
-            );
-        }
+        checkIdToken(idToken);
 
         try {
             String email = (String) body.get("email");

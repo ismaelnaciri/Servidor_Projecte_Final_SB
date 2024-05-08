@@ -18,12 +18,16 @@ public class User {
     private String phoneNumber;
     private String img = "https://firebasestorage.googleapis.com/v0/b/social-post-m13.appspot.com/o/placeholder_pfp.jpg?alt=media&token=4cf013bf-1afd-4c5a-8a4e-7248b5016feb";
     private List<User> friends;
+    private List<User> followers;
+    private List<User> following;
 
     public User() {
 
     }
 
-    public User(String id, String email, String password, String firstName, String lastName, int age, String phoneNumber, String img, List<User> friends) {
+    public User(String id, String email, String password, String firstName,
+                String lastName, int age, String phoneNumber, String img,
+                List<User> friends, List<User> followers, List<User> following) {
         this.id = id;
         this.email = email;
         this.password = password;
@@ -33,6 +37,8 @@ public class User {
         this.phoneNumber = phoneNumber;
         this.img = img;
         this.friends = friends;
+        this.followers = followers;
+        this.following = following;
     }
 
     public String getId() {
@@ -105,5 +111,21 @@ public class User {
 
     public void setFriends(List<User> friends) {
         this.friends = friends;
+    }
+
+    public List<User> getFollowers() {
+        return followers;
+    }
+
+    public void setFollowers(List<User> followers) {
+        this.followers = followers;
+    }
+
+    public List<User> getFollowing() {
+        return following;
+    }
+
+    public void setFollowing(List<User> following) {
+        this.following = following;
     }
 }

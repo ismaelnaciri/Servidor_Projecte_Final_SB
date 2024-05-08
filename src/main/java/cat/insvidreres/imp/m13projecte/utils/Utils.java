@@ -1,15 +1,18 @@
 package cat.insvidreres.imp.m13projecte.utils;
 
-import javax.crypto.SecretKey;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.FirebaseToken;
+
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
@@ -22,7 +25,9 @@ public interface Utils {
         POST("posts"),
         LIKE("likes"),
         COMMENT("comments"),
-        CATEGORIES("categories"),;
+        CATEGORIES("categories"),
+        ADMINS("admins"),
+        ;
 
         private final String TEXT;
 
@@ -76,6 +81,41 @@ public interface Utils {
     default String decodePassword(String password) {
         byte[] decodedBytes = Base64.getDecoder().decode(password);
         return new String(decodedBytes, StandardCharsets.UTF_8);
+    }
+
+
+    default JSONResponse checkIdToken(String idToken) {
+        List<Object> dataToShow = new ArrayList<>();
+        try {
+            FirebaseToken token = FirebaseAuth.getInstance().verifyIdToken(idToken);
+            if (token == null) {
+                return generateResponse(
+                        401,
+                        LocalDateTime.now().toString(),
+                        "User token not found!",
+                        null
+                );
+            }
+            //User auth uid :)
+            dataToShow.add(token.getUid());
+
+            return generateResponse(
+                    200,
+                    LocalDateTime.now().toString(),
+                    "Gotten Token successfully",
+                    dataToShow
+            );
+        } catch (FirebaseAuthException e) {
+            System.out.println("Error getting token | " + e.getMessage());
+            generateResponse(
+                    500,
+                    LocalDateTime.now().toString(),
+                    "Error getting token | " + e.getMessage(),
+                    null
+            );
+        }
+
+        return null;
     }
 
 }
