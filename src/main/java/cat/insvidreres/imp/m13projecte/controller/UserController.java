@@ -98,4 +98,10 @@ public class UserController {
 
         return userService.updateUserPFP(idToken, clientBody);
     }
+
+    @GetMapping("/user/loadChatUserJWT")
+    public JSONResponse loadChatUserJWT(@RequestHeader("idToken") String idToken, @RequestParam("user_id") String user_id) throws ExecutionException, InterruptedException {
+
+        return userService.loadChatJWT(idToken, user_id);
+    }
 }

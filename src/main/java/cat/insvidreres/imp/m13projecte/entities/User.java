@@ -15,7 +15,7 @@ public class User {
     private String firstName;
     private String lastName = "";
     private int age = 0;
-    private String phoneNumber;
+    private String phoneNumber = "";
     private String img = "https://firebasestorage.googleapis.com/v0/b/social-post-m13.appspot.com/o/placeholder_pfp.jpg?alt=media&token=4cf013bf-1afd-4c5a-8a4e-7248b5016feb";
     private List<User> friends;
     private List<User> followers;
@@ -36,10 +36,11 @@ public class User {
         this.age = age;
         this.phoneNumber = phoneNumber;
         this.img = img;
-        this.friends = friends;
-        this.followers = followers;
-        this.following = following;
+        this.friends = friends != null ? friends : new ArrayList<>();
+        this.followers = followers != null ? followers : new ArrayList<>();
+        this.following = following != null ? following : new ArrayList<>();
     }
+
 
     public String getId() {
         return id;
