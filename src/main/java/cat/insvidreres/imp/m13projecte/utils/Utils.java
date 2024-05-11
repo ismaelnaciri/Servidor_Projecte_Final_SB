@@ -31,6 +31,7 @@ public interface Utils {
         COMMENT("comments"),
         CATEGORIES("categories"),
         ADMINS("admins"),
+        CHATS("chats"),
         ;
 
         private final String TEXT;
