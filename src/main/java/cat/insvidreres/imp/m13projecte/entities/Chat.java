@@ -5,7 +5,8 @@ import java.util.List;
 
 public class Chat {
     private String id;
-    private List<User> users;
+    private List<String> users;
+    private List<String> userIds;
     private String lastMessage;
     private String lastMessageDate;
 
@@ -13,9 +14,10 @@ public class Chat {
     public Chat() {
     }
 
-    public Chat(String id, List<User> users, String lastMessage, String lastMessageDate) {
+    public Chat(String id, List<String> users, List<String> userIds, String lastMessage, String lastMessageDate) {
         this.id = id;
-        this.users = users != null ? users : new ArrayList<>();
+        this.users = users;
+        this.userIds = userIds;
         this.lastMessage = lastMessage;
         this.lastMessageDate = lastMessageDate;
     }
@@ -28,12 +30,20 @@ public class Chat {
         this.id = id;
     }
 
-    public List<User> getUsers() {
+    public List<String> getUsers() {
         return users;
     }
 
-    public void setUsers(List<User> users) {
+    public void setUsers(List<String> users) {
         this.users = users;
+    }
+
+    public List<String> getUserIds() {
+        return userIds;
+    }
+
+    public void setUserIds(List<String> userIds) {
+        this.userIds = userIds;
     }
 
     public String getLastMessage() {

@@ -7,13 +7,13 @@ public class Message {
     private String message;
 
 
+    public Message() {
+    }
+
     public Message(String senderId, String sentDate, String message) {
         this.senderId = senderId;
         this.sentDate = sentDate;
         this.message = message;
-    }
-
-    public Message() {
     }
 
     public String getSenderId() {

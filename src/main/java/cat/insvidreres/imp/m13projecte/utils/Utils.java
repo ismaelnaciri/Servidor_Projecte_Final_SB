@@ -1,5 +1,8 @@
 package cat.insvidreres.imp.m13projecte.utils;
 
+import cat.insvidreres.imp.m13projecte.entities.Chat;
+import cat.insvidreres.imp.m13projecte.entities.Message;
+import cat.insvidreres.imp.m13projecte.entities.User;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
@@ -18,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 
 public interface Utils {
 
@@ -127,5 +131,36 @@ public interface Utils {
         byte[] apiKeySecretBytes = CHAT_API_KEY.getBytes(StandardCharsets.UTF_8);
         return new SecretKeySpec(apiKeySecretBytes, SignatureAlgorithm.HS256.getJcaName());
     }
+
+    // Convert payload to Chat object
+    default Chat convertPayloadToChat(Map<String, Object> payload) {
+        Map<String, Object> chatWrapper = (Map<String, Object>) payload.get("chat");
+
+        Chat chat = new Chat();
+        chat.setId((String) chatWrapper.get("id"));
+        // Convert users and userIds if necessary
+        chat.setUsers((List<String>) chatWrapper.get("users"));
+        chat.setUserIds((List<String>) chatWrapper.get("userIds"));
+        chat.setLastMessage((String) chatWrapper.get("lastMessage"));
+        chat.setLastMessageDate((String) chatWrapper.get("lastMessageDate"));
+        return chat;
+    }
+
+    default Message convertPayloadToMessage(Map<String, Object> payload) {
+        Map<String, Object> innerMessage = (Map<String, Object>) payload.get("message");
+
+        String senderId = (String) innerMessage.get("senderId");
+        String sentDate = (String) innerMessage.get("sentDate");
+        String messageContent = (String) innerMessage.get("message");
+
+        Message message = new Message();
+        message.setSenderId(senderId);
+        message.setSentDate(sentDate);
+        message.setMessage(messageContent);
+        return message;
+    }
+
+
+
 
 }
