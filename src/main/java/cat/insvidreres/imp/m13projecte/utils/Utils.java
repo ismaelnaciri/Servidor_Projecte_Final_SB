@@ -3,9 +3,12 @@ package cat.insvidreres.imp.m13projecte.utils;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
+import io.jsonwebtoken.SignatureAlgorithm;
 
+import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -18,7 +21,8 @@ import java.util.List;
 
 public interface Utils {
 
-    public String SALT = "social-post-salt-dam";
+    public final String SALT = "social-post-salt-dam";
+    public final String CHAT_API_KEY = "aay28xyc3rck";
 
     enum CollectionName {
         USER("users"),
@@ -116,6 +120,11 @@ public interface Utils {
         }
 
         return null;
+    }
+
+    default SecretKey generateSecretKey() {
+        byte[] apiKeySecretBytes = CHAT_API_KEY.getBytes(StandardCharsets.UTF_8);
+        return new SecretKeySpec(apiKeySecretBytes, SignatureAlgorithm.HS256.getJcaName());
     }
 
 }
