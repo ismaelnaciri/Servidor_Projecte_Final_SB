@@ -181,11 +181,13 @@ public class ChatService implements Utils {
                         dataToShow
                 );
             } else {
+                dataToShow.add(chat);
+
                 return generateResponse(
-                        401,
+                        200,
                         LocalDateTime.now().toString(),
                         "Chat Room already exists!",
-                        null
+                        dataToShow
                 );
             }
 
