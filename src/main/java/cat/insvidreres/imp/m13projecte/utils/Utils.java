@@ -1,5 +1,7 @@
 package cat.insvidreres.imp.m13projecte.utils;
 
+import cat.insvidreres.imp.m13projecte.entities.Comment;
+import cat.insvidreres.imp.m13projecte.entities.Post;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
@@ -18,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 
 public interface Utils {
 
@@ -127,4 +130,16 @@ public interface Utils {
         return new SecretKeySpec(apiKeySecretBytes, SignatureAlgorithm.HS256.getJcaName());
     }
 
+//    default Post convertPyloadToPost(Map<String, Object> payload) {
+//
+//
+//        //Ejemplo
+//        String postId = (String) innerPost.get("id");
+//        String postEmail = (String) innerPost.get("id");
+//        String postDescription = (String) innerPost.get("id");
+//        List<String> postImages = (List<ByteArray>) innerPost.get("id");
+//        List<String> postCategories = (List<String>) innerPost.get("id");
+//        List<String> postLikes = (List<String>) innerPost.get("id");
+//        List<Comment> postComments = (List<Comment>) innerPost.get("id");
+//    }
 }
