@@ -32,7 +32,6 @@ public class ChatService implements Utils {
 
             chatsCollectionAPIF.get().forEach((doc) -> {
                 System.out.println("Document with chatId: " + chatId + " found");
-                System.out.println(doc);
                 if (Objects.equals(doc.get("id"), chatId)) {
                     dbFirestore.collection(CollectionName.CHATS.toString()).document(doc.getId()).collection("messages")
                             .addSnapshotListener(((queryDocumentSnapshots, e) -> {
@@ -45,7 +44,6 @@ public class ChatService implements Utils {
                                 for (DocumentSnapshot messageDoc : queryDocumentSnapshots.getDocuments()) {
                                     // Parse the message document to POJO or add to dataToShow as needed
                                     Message message = messageDoc.toObject(Message.class);
-//                                    System.out.println(messageDoc);
                                     dataToShow.add(message);
                                 }
 

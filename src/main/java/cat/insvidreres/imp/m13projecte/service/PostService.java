@@ -238,7 +238,7 @@ public class PostService implements Utils {
                 postData.put("comments", commentsList);
                 postRef.set(postData);
 
-                dataToShow.add(postData);
+                dataToShow.add(comment);
 
                 System.out.println("COMMENT ADDED SUCCESSFULLY");
                 return generateResponse(200, LocalDateTime.now().toString(), "Comment added successfully", dataToShow);
