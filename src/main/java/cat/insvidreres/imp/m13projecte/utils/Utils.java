@@ -1,7 +1,8 @@
 package cat.insvidreres.imp.m13projecte.utils;
 
-import cat.insvidreres.imp.m13projecte.entities.Comment;
-import cat.insvidreres.imp.m13projecte.entities.Post;
+import cat.insvidreres.imp.m13projecte.entities.Chat;
+import cat.insvidreres.imp.m13projecte.entities.Message;
+import cat.insvidreres.imp.m13projecte.entities.User;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
@@ -34,6 +35,7 @@ public interface Utils {
         COMMENT("comments"),
         CATEGORIES("categories"),
         ADMINS("admins"),
+        CHATS("chats"),
         ;
 
         private final String TEXT;
@@ -130,16 +132,35 @@ public interface Utils {
         return new SecretKeySpec(apiKeySecretBytes, SignatureAlgorithm.HS256.getJcaName());
     }
 
-//    default Post convertPyloadToPost(Map<String, Object> payload) {
-//
-//
-//        //Ejemplo
-//        String postId = (String) innerPost.get("id");
-//        String postEmail = (String) innerPost.get("id");
-//        String postDescription = (String) innerPost.get("id");
-//        List<String> postImages = (List<ByteArray>) innerPost.get("id");
-//        List<String> postCategories = (List<String>) innerPost.get("id");
-//        List<String> postLikes = (List<String>) innerPost.get("id");
-//        List<Comment> postComments = (List<Comment>) innerPost.get("id");
-//    }
+    // Convert payload to Chat object
+    default Chat convertPayloadToChat(Map<String, Object> payload) {
+        Map<String, Object> chatWrapper = (Map<String, Object>) payload.get("chat");
+
+        Chat chat = new Chat();
+        chat.setId((String) chatWrapper.get("id"));
+        // Convert users and userIds if necessary
+        chat.setUsers((List<String>) chatWrapper.get("users"));
+        chat.setUserIds((List<String>) chatWrapper.get("userIds"));
+        chat.setLastMessage((String) chatWrapper.get("lastMessage"));
+        chat.setLastMessageDate((String) chatWrapper.get("lastMessageDate"));
+        return chat;
+    }
+
+    default Message convertPayloadToMessage(Map<String, Object> payload) {
+        Map<String, Object> innerMessage = (Map<String, Object>) payload.get("message");
+
+        String senderId = (String) innerMessage.get("senderId");
+        String sentDate = (String) innerMessage.get("sentDate");
+        String messageContent = (String) innerMessage.get("message");
+
+        Message message = new Message();
+        message.setSenderId(senderId);
+        message.setSentDate(sentDate);
+        message.setMessage(messageContent);
+        return message;
+    }
+
+
+
+
 }
