@@ -23,7 +23,11 @@ public class PostController {
 
 
     @PostMapping("/posts")
-    public JSONResponse savePost(@RequestBody Post post, @RequestHeader("idToken") String idToken) throws ExecutionException, InterruptedException {
+    public JSONResponse savePost(@RequestBody Post post, @RequestHeader("idToken") String idToken, @RequestParam("category") String category) throws ExecutionException, InterruptedException {
+        String[] categories = category.split(",");
+        for (String cat : categories) {
+            post.getCategories().add(cat.trim());
+        }
         return postService.createPost(post, idToken);
     }
 
