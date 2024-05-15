@@ -8,7 +8,6 @@ public class Comment {
     private String comment;
     private String commentAt;
     private List<String> likes;
-
     private String id;
 
     public Comment(String email, String comment, String commentAt, List<String> likes, String id) {

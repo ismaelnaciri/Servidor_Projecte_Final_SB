@@ -17,8 +17,11 @@ import com.google.firebase.cloud.FirestoreClient;
 //import com.google.firestore.v1.WriteResult;
 import com.google.cloud.firestore.*;
 import com.google.gson.Gson;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.stereotype.Service;
 
+import javax.crypto.SecretKey;
 import java.io.FileInputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
@@ -181,7 +184,9 @@ public class UserService implements Utils {
                     userToInsert.put("email", user.getEmail());
                     userToInsert.put("phoneNumber", user.getPhoneNumber());
                     userToInsert.put("img", user.getImg());
-                    userToInsert.put("friends", user.getFriends());
+                    userToInsert.put("friends", new ArrayList<>());
+                    userToInsert.put("followers", new ArrayList<>());
+                    userToInsert.put("following", new ArrayList<>());
 
                     dataToShow.add(userToInsert);
                     dbFirestore.collection(CollectionName.USER.toString()).add(userToInsert);
@@ -469,11 +474,12 @@ public class UserService implements Utils {
     public JSONResponse addUserFriend(String idToken, String email, User userToAdd) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         ApiFuture<QuerySnapshot> collectionApiFuture = null;
+        ApiFuture<QuerySnapshot> collectionApiFuture2 = null;
         List<Object> dataToShow = new ArrayList<>();
 
         checkIdToken(idToken);
 
-        System.out.println("Email: " + email);
+        System.out.println("Adding to " + email + " ...");
 
         try {
             collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
@@ -483,35 +489,43 @@ public class UserService implements Utils {
                     User userToShow = doc.toObject(User.class);
 
                     List<User> tempList = userToShow.getFriends();
+                    System.out.println("Sender's friend list " + email + " | " + tempList);
                     tempList.add(userToAdd);
+                    System.out.println("After add for " + email + " | " + tempList);
 
-                    System.out.println("Added to " + email + " | " + userToAdd.getEmail());
-                    System.out.println(tempList);
-                    dataToShow.add(tempList);
-
-
-                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
-                    System.out.printf("\nFriend added correctly to %s!", email);
+                    try {
+                        // Update operation
+                        dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
+                        System.out.println("Update successful for document ID: " + doc.getId());
+                    } catch (Exception e) {
+                        System.out.println("Error updating the friends array at " + email + " | " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                    System.out.println("\nFriend " + userToAdd.getEmail() + " added correctly to " + email);
                 }
             });
 
+            //From here on it works
+
             JSONResponse userDetailsJSON = getUserDetails(idToken, email);
             User tempUser = (User) userDetailsJSON.getData().get(0);
-            System.out.println("User to also add gotten? " + tempUser.getEmail());
+            System.out.println("\nUser to also add gotten? " + tempUser.getEmail());
 
-            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", userToAdd.getEmail()).get();
-            collectionApiFuture.get().forEach((doc) -> {
+            System.out.println("Adding to " + userToAdd.getEmail() + " ...");
+
+            collectionApiFuture2 = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", userToAdd.getEmail()).get();
+            collectionApiFuture2.get().forEach((doc) -> {
                 if (Objects.equals(doc.get("email"), userToAdd.getEmail())) {
                     User userToShow = doc.toObject(User.class);
 
                     List<User> tempList = userToShow.getFriends();
+                    System.out.println("Receiver's friend list " + userToAdd.getEmail() + " | " + tempList);
                     tempList.add(tempUser);
-
-                    System.out.println("Added to " + userToAdd.getEmail() + " | " + tempUser.getEmail());
-                    System.out.println(tempList);
+                    System.out.println("After add | " + tempList);
+                    dataToShow.add(tempUser);
 
                     dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
-                    System.out.printf("\nFriend also added correctly to %s!", tempUser.getEmail());
+                    System.out.printf("\nFriend " + tempUser.getEmail() + " added correctly to %s! ", userToAdd.getEmail());
                 }
             });
 
@@ -537,6 +551,7 @@ public class UserService implements Utils {
     public JSONResponse deleteUserFriend(String idToken, String email, String friendEmail) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         ApiFuture<QuerySnapshot> collectionApiFuture = null;
+        ApiFuture<QuerySnapshot> collectionApiFuture2 = null;
         List<Object> dataToShow = new ArrayList<>();
 
         checkIdToken(idToken);
@@ -558,8 +573,6 @@ public class UserService implements Utils {
                         }
                     }
 
-                    dataToShow.add(tempList);
-
                     dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
                     System.out.printf("\nFriend eliminated correctly to %s !", email);
                 }
@@ -568,14 +581,15 @@ public class UserService implements Utils {
             JSONResponse userDetailsJSON = getUserDetails(idToken, email);
             User tempUser = (User) userDetailsJSON.getData().get(0);
 
-            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", friendEmail).get();
-            collectionApiFuture.get().forEach((doc) -> {
+            collectionApiFuture2 = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", friendEmail).get();
+            collectionApiFuture2.get().forEach((doc) -> {
                 if (Objects.equals(doc.get("email"), friendEmail)) {
                     User userToShow = doc.toObject(User.class);
 
                     List<User> tempList = userToShow.getFriends();
                     for (User user : tempList) {
                         if (Objects.equals(tempUser.getEmail(), user.getEmail())) {
+                            dataToShow.add(user);
                             tempList.remove(user);
                             break;
                         }
@@ -826,6 +840,47 @@ public class UserService implements Utils {
             );
         }
     }
+
+
+    public JSONResponse loadChatJWT(String idToken, String user_id) {
+        List<Object> dataToShow = new ArrayList<>();
+        try {
+            checkIdToken(idToken);
+
+            long EXPIRATION_TIME = 10_800; // 3 hours
+
+            Date now = new Date();
+            Date expiryDate = new Date(now.getTime() + EXPIRATION_TIME);
+            SecretKey secretKey = generateSecretKey();
+
+            String chatJwt = Jwts.builder()
+                    .claim("user_id", user_id)
+                    .setExpiration(expiryDate)
+                    .signWith(secretKey, SignatureAlgorithm.HS256)
+                    .compact();
+
+            dataToShow.add(chatJwt);
+            System.out.println(chatJwt);
+
+            return generateResponse(
+                    200,
+                    LocalDateTime.now().toString(),
+                    "Generated chat jwt correctly!",
+                    dataToShow
+            );
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("Error | " + e.getMessage());
+            return generateResponse(
+                    500,
+                    LocalDateTime.now().toString(),
+                    "Error generating jwt " + e.getMessage(),
+                    null
+            );
+        }
+    }
+
 
     private String getDownloadUrl(Storage storage, BlobId blobId) {
         Blob blob = storage.get(blobId);

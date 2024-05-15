@@ -213,38 +213,52 @@ public class PostService implements Utils {
     public JSONResponse addCommentPost(Comment comment, String idToken, String idPost) {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         List<Object> dataToShow = new ArrayList<>();
+        ApiFuture<QuerySnapshot> future = null;
 
 
         checkIdToken(idToken);
 
         try {
 
-            DocumentReference postRef = dbFirestore.collection("posts").document(idPost);
-            DocumentSnapshot postSnapshot = postRef.get().get();
+            future = dbFirestore.collection("posts").whereEqualTo("id", idPost).get();
+            future.get().forEach((doc) -> {
+                if (Objects.equals(doc.get("id"), idPost)) {
+                    List<Map<String, Object>> commentsList = (List<Map<String, Object>>) doc.get("comments");
 
-            if (postSnapshot.exists()) {
-                Map<String, Object> postData = postSnapshot.getData();
+                    Map<String, Object> commentData = new HashMap<>();
+                    commentData.put("email", comment.getEmail());
+                    commentData.put("comment", comment.getComment());
+                    commentData.put("commentAt", comment.getCommentAt());
+                    commentData.put("likes", comment.getLikes());
+                    commentData.put("id", comment.getId());
 
-                List<Map<String, Object>> commentsList = (List<Map<String, Object>>) postData.getOrDefault("comments", new ArrayList<>());
+                    assert commentsList != null;
+                    commentsList.add(commentData);
 
-                Map<String, Object> commentData = new HashMap<>();
-                commentData.put("email", comment.getEmail());
-                commentData.put("comment", comment.getComment());
-                commentData.put("commentAt", comment.getCommentAt());
-                commentData.put("likes", comment.getLikes());
-                commentData.put("id", comment.getId());
-                commentsList.add(commentData);
+                    dbFirestore.collection("posts").document(doc.getId()).update("comments", commentsList);
 
-                postData.put("comments", commentsList);
-                postRef.set(postData);
+                    dataToShow.add(comment);
+                    System.out.println("COMMENT ADDED SUCCESSFULLY");
 
-                dataToShow.add(postData);
+                }
+            });
 
-                System.out.println("COMMENT ADDED SUCCESSFULLY");
-                return generateResponse(200, LocalDateTime.now().toString(), "Comment added successfully", dataToShow);
+            if (!dataToShow.isEmpty()) {
+                return generateResponse(
+                        200,
+                        LocalDateTime.now().toString(),
+                        "Comment added successfully",
+                        dataToShow
+                );
             } else {
-                return generateResponse(404, LocalDateTime.now().toString(), "Post with ID " + idPost + " not found", null);
+                return generateResponse(
+                        404,
+                        LocalDateTime.now().toString(),
+                        "No post found with id " + idPost,
+                        null
+                );
             }
+
         } catch (Exception e) {
             e.printStackTrace();
             return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE ADDING COMMENT | " + e.getMessage(), null);
