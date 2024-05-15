@@ -87,14 +87,14 @@ public class AdminService implements Utils {
         checkIdToken(idToken);
 
         try {
-            if (idToken == null || idToken.isEmpty()) {
-                return generateResponse(
-                        401,
-                        LocalDateTime.now().toString(),
-                        "Wrong token.",
-                        null
-                );
-            }
+//            if (idToken == null || idToken.isEmpty()) {
+//                return generateResponse(
+//                        401,
+//                        LocalDateTime.now().toString(),
+//                        "Wrong token.",
+//                        null
+//                );
+//            }
 
             String encryptedPassword = encryptPassword(user.getPassword(), SALT);
             System.out.println("encrypted password: " + encryptedPassword);
