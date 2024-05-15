@@ -8,6 +8,7 @@ import cat.insvidreres.imp.m13projecte.utils.JSONResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
@@ -22,11 +23,15 @@ public class PostController {
 
 
     @PostMapping("/posts")
-    public JSONResponse savePost(@RequestBody Map<String, Object> payload, @RequestHeader("idToken") String idToken, @RequestParam("category") String category) throws ExecutionException, InterruptedException {
+    public JSONResponse savePost(@RequestBody Map<String, Object> payload, @RequestHeader("idToken") String idToken, @RequestParam("category") String category) throws ExecutionException, InterruptedException, IOException {
 
         return postService.createPost(payload, idToken, category);
     }
 
+    @PostMapping("/postsAndroid")
+    public JSONResponse savePostAndorid(@RequestHeader("idToken") String idToken, @RequestBody Map<String, Object> postBody) throws ExecutionException, InterruptedException, IOException {
+        return postService.createPostAndorid(idToken, postBody);
+    }
 
 
     @GetMapping("/allposts")

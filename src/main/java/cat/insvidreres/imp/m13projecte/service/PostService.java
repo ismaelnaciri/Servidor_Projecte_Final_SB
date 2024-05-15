@@ -10,13 +10,11 @@ import cat.insvidreres.imp.m13projecte.utils.Utils;
 import com.google.api.core.ApiFuture;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.firestore.*;
+import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseAuthException;
-import com.google.firebase.auth.FirebaseToken;
 import com.google.firebase.cloud.FirestoreClient;
 import org.springframework.stereotype.Service;
 
@@ -36,32 +34,109 @@ public class PostService implements Utils {
         checkIdToken(idToken);
 
         Map<String, Object> innerPost = (Map<String, Object>) payload.get("post");
-//        Post post = new Post();
-//        post.setId((String) payload.get("id"));
-//        post.setEmail((String) payload.get("email"));
-//        post.setDescription((String) payload.get("description"));
-//        post.setCreatedAT((String) payload.get("createdAT"));
 
-
-        String[] categories = category.split(",");
-//        for (String cat : categories) {
-//            post.getCategories().add(cat.trim());
-//        }
+        List<String> categories = Arrays.stream(category.split(",")).toList();
 
 
         ArrayList<ArrayList<Integer>> imgDataList = (ArrayList<ArrayList<Integer>>) payload.get("postImages");
         List<byte[]> resultBytesArray = new ArrayList<>();
 
-        for (int i = 0; i < imgDataList.size(); i++) {
-            byte[] temp = new byte[imgDataList.get(i).size()];
+        for (ArrayList<Integer> integers : imgDataList) {
+            byte[] temp = new byte[integers.size()];
 
-            for (int j = 0; j < imgDataList.get(i).size(); j++) {
-                temp[j] = imgDataList.get(i).get(j).byteValue();
+            for (int j = 0; j < integers.size(); j++) {
+                temp[j] = integers.get(j).byteValue();
             }
             resultBytesArray.add(temp);
         }
 
 
+        List<String> photoStorageUrlList = new ArrayList<>();
+
+        System.out.println("imgData length: " + imgDataList.size());
+
+        for (int i = 0; i < resultBytesArray.size(); i++) {
+            String customFileName = "Post/" + innerPost.get("email") + "/" + innerPost.get("id") + "-" + i + ".jpg";
+
+            FileInputStream serviceAccount = new FileInputStream("src/main/resources/social-post-m13-firebase-adminsdk-jh74w-641114c269.json");
+
+            Storage storage = StorageOptions.newBuilder()
+                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                    .build()
+                    .getService();
+
+            BlobId blobId = BlobId.of("social-post-m13.appspot.com", customFileName);
+
+            BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
+                    .setContentType("image/jpeg")
+                    .build();
+
+            storage.create(blobInfo, resultBytesArray.get(i));
+
+            String fileUrl = getDownloadUrl(storage, blobId);
+            photoStorageUrlList.add(fileUrl);
+            System.out.println("Link of new profile pfp: " + fileUrl);
+        }
+
+
+        try {
+
+//            System.out.println("gnrsngvfsoa | " + post.getId());
+            DocumentReference postRef = dbFirestore.collection("posts").document();
+            DocumentSnapshot documentFirebaseExisist = postRef.get().get();
+
+            if (documentFirebaseExisist.exists()) {
+                return generateResponse(400, LocalDateTime.now().toString(), "A post with the same ID already exists", null);
+            } else {
+                Map<String, Object> postData = new HashMap<>();
+                postData.put("id", innerPost.get("id"));
+                postData.put("email", innerPost.get("email"));
+                postData.put("createdAT", innerPost.get("createdAT"));
+                postData.put("description", innerPost.get("description"));
+
+                postData.put("images", photoStorageUrlList);
+
+                postData.put("categories", categories);
+                postData.put("likes", new ArrayList<>());
+                postData.put("comments", new ArrayList<>());
+
+
+                postRef.set(postData);
+
+                dataToShow.add(postData);
+
+                System.out.println("POST CREATED SUCCESSFULLY");
+                return generateResponse(200, LocalDateTime.now().toString(), "Post created", dataToShow);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE CREATING POST | " + e.getMessage(), null);
+        }
+    }
+
+
+    public JSONResponse createPostAndorid(String idToken, Map<String , Object> body) throws IOException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        List<Object> dataToShow = new ArrayList<>();
+
+        Map<String, Object> innerPost = (Map<String, Object>) body.get("post");
+
+        checkIdToken(idToken);
+
+        ArrayList<ArrayList<Integer>> imgDataList = (ArrayList<ArrayList<Integer>>) body.get("imgData");
+        List<byte[]> resultBytesArray = new ArrayList<>();
+
+        for (ArrayList<Integer> integers : imgDataList) {
+            byte[] temp = new byte[integers.size()];
+
+            for (int j = 0; j < integers.size(); j++) {
+                temp[j] = integers.get(j).byteValue();
+            }
+            resultBytesArray.add(temp);
+        }
+
+
+//        Post postToFirebase = (Post) body.get("post");
         List<String> photoStorageUrlList = new ArrayList<>();
 
         System.out.println("imgData length: " + imgDataList.size());
@@ -105,10 +180,25 @@ public class PostService implements Utils {
 
                 postData.put("images", photoStorageUrlList);
 
-                postData.put("categories", categories);
-                postData.put("likes", new ArrayList<>());
-                postData.put("comments", new ArrayList<>());
+                postData.put("categories", innerPost.get("categories"));
+                postData.put("likes", innerPost.get("likes"));
+                postData.put("comments", innerPost.get("comments"));
 
+//               List<Map<String, Object>> commentsList = new ArrayList<>();
+//                if (postData != null) {
+//                    for (Comment comment : ) {
+//                        Map<String, Object> commentData = new HashMap<>();
+//                        commentData.put("email", comment.getEmail());
+//                        commentData.put("comment", comment.getComment());
+//                        commentData.put("commentAt", comment.getCommentAt());
+//
+//                        // Convert array of likes to list
+//                        List<String> likesList = comment.getLikes();
+//                        commentData.put("likes", likesList);
+//
+//                        commentsList.add(commentData);
+//                    }
+//                }
 
                 postRef.set(postData);
 
@@ -460,9 +550,13 @@ public class PostService implements Utils {
             e.printStackTrace();
             return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE DELETING LIKE | " + e.getMessage(), null);
         }
+
     }
 
-
+    private String getDownloadUrl(Storage storage, BlobId blobId) {
+        Blob blob = storage.get(blobId);
+        return blob.signUrl(525_600, java.util.concurrent.TimeUnit.MINUTES).toString();
+    }
 
 }
 
