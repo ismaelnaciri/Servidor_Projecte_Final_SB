@@ -163,11 +163,10 @@ public class ChatService implements Utils {
                 }
             }
 
+
             if (!chatRoomExists) {
                 DocumentReference chatRoomRef = dbFirestore.collection(CollectionName.CHATS.toString()).document();
                 chatRoomRef.set(chat);
-
-                CollectionReference messagesCollection = chatRoomRef.collection("messages");
 
                 dataToShow.add(chat);
                 System.out.println("Chat added successfully with its messages sub-collection!");
