@@ -8,6 +8,7 @@ import cat.insvidreres.imp.m13projecte.utils.JSONResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 
@@ -21,12 +22,9 @@ public class PostController {
 
 
     @PostMapping("/posts")
-    public JSONResponse savePost(@RequestBody Post post, @RequestHeader("idToken") String idToken, @RequestParam("category") String category) throws ExecutionException, InterruptedException {
-        String[] categories = category.split(",");
-        for (String cat : categories) {
-            post.getCategories().add(cat.trim());
-        }
-        return postService.createPost(post, idToken);
+    public JSONResponse savePost(@RequestBody Map<String, Object> payload, @RequestHeader("idToken") String idToken, @RequestParam("category") String category) throws ExecutionException, InterruptedException {
+
+        return postService.createPost(payload, idToken, category);
     }
 
 

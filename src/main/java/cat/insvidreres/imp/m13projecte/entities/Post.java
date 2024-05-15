@@ -22,10 +22,10 @@ public class Post {
         this.email = email;
         this.createdAT = createdAT;
         this.description = description;
-        this.images = images;
-        this.categories = categories;
-        this.likes = likes;
-        this.comments = comments;
+        this.images = images != null ? images : new ArrayList<>();
+        this.categories = categories != null ? categories : new ArrayList<>();
+        this.likes = likes != null ? likes : new ArrayList<>();
+        this.comments = comments != null ? comments : new ArrayList<>();
     }
 
 
