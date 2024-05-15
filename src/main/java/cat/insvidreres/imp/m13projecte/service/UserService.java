@@ -433,7 +433,7 @@ public class UserService implements Utils {
 
                     List<User> tempList = docUser.getFollowers();
 
-                    for (User user: tempList) {
+                    for (User user : tempList) {
                         if (Objects.equals(user.getEmail(), email)) {
                             tempList.remove(user);
                             System.out.println("bomba?");
@@ -485,7 +485,10 @@ public class UserService implements Utils {
                     List<User> tempList = userToShow.getFriends();
                     tempList.add(userToAdd);
 
+                    System.out.println("Added to " + email + " | " + userToAdd.getEmail());
+                    System.out.println(tempList);
                     dataToShow.add(tempList);
+
 
                     dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
                     System.out.printf("\nFriend added correctly to %s!", email);
@@ -498,15 +501,18 @@ public class UserService implements Utils {
 
             collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", userToAdd.getEmail()).get();
             collectionApiFuture.get().forEach((doc) -> {
-               if (Objects.equals(doc.get("email"), userToAdd.getEmail())) {
-                   User userToShow = doc.toObject(User.class);
+                if (Objects.equals(doc.get("email"), userToAdd.getEmail())) {
+                    User userToShow = doc.toObject(User.class);
 
-                   List<User> tempList = userToShow.getFriends();
-                   tempList.add(tempUser);
+                    List<User> tempList = userToShow.getFriends();
+                    tempList.add(tempUser);
 
-                   dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
-                   System.out.printf("\nFriend also added correctly to %s!", tempUser.getEmail());
-               }
+                    System.out.println("Added to " + userToAdd.getEmail() + " | " + tempUser.getEmail());
+                    System.out.println(tempList);
+
+                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
+                    System.out.printf("\nFriend also added correctly to %s!", tempUser.getEmail());
+                }
             });
 
             return generateResponse(
@@ -597,7 +603,6 @@ public class UserService implements Utils {
                     null);
         }
     }
-
 
 
     public JSONResponse getUserDetails(String idToken, String email) throws ExecutionException, InterruptedException {
