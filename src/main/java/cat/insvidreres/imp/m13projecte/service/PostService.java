@@ -406,6 +406,14 @@ public class PostService implements Utils {
         List<Object> dataToShow = new ArrayList<>();
         ApiFuture<QuerySnapshot> future = null;
 
+        // Declare emailParsed as final or effectively final
+        final String emailParsed;
+        if (email.contains("\"")) {
+            emailParsed = email.replaceAll("\"", "");
+        } else {
+            emailParsed = email;
+        }
+
         checkIdToken(idToken);
 
         try {
@@ -416,12 +424,8 @@ public class PostService implements Utils {
 
                 List<String> likesList = (List<String>) postData.getOrDefault("likes", new ArrayList<>());
 
-                System.out.println("Email received from client " + email);
-//                if (!likesList.contains(email.split("\"")[1])) {
-//                    System.out.println("email | " + email.split("\"")[1]);
-//                    likesList.add(email.split("\"")[1]);
-//                }
-                likesList.add(email);
+                System.out.println("Email received from client " + emailParsed);
+                likesList.add(emailParsed);
                 System.out.println(likesList);
 
                 dbFirestore.collection("posts").document(doc.getId()).update("likes", likesList);
@@ -437,6 +441,7 @@ public class PostService implements Utils {
             return generateResponse(500, LocalDateTime.now().toString(), "ERROR WHILE INSERTING LIKE | " + e.getMessage(), null);
         }
     }
+
 
 
     public JSONResponse deleteLikePost(String idToken, String idPost, String email) {
