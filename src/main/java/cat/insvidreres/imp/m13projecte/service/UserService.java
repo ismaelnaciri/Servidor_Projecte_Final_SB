@@ -473,8 +473,6 @@ public class UserService implements Utils {
 
     public JSONResponse addUserFriend(String idToken, String email, User userToAdd) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
-        ApiFuture<QuerySnapshot> collectionApiFuture = null;
-        ApiFuture<QuerySnapshot> collectionApiFuture2 = null;
         List<Object> dataToShow = new ArrayList<>();
 
         checkIdToken(idToken);
@@ -482,9 +480,11 @@ public class UserService implements Utils {
         System.out.println("Adding to " + email + " ...");
 
         try {
-            collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
+            // Step 1: Add userToAdd to the sender's friend list
+            ApiFuture<QuerySnapshot> collectionApiFuture = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", email).get();
+            QuerySnapshot senderSnapshot = collectionApiFuture.get();
 
-            collectionApiFuture.get().forEach((doc) -> {
+            for (QueryDocumentSnapshot doc : senderSnapshot) {
                 if (Objects.equals(doc.get("email"), email)) {
                     User userToShow = doc.toObject(User.class);
 
@@ -494,8 +494,8 @@ public class UserService implements Utils {
                     System.out.println("After add for " + email + " | " + tempList);
 
                     try {
-                        // Update operation
-                        dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
+                        ApiFuture<WriteResult> updateFuture = dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
+                        updateFuture.get(); // Wait for the update to complete
                         System.out.println("Update successful for document ID: " + doc.getId());
                     } catch (Exception e) {
                         System.out.println("Error updating the friends array at " + email + " | " + e.getMessage());
@@ -503,18 +503,19 @@ public class UserService implements Utils {
                     }
                     System.out.println("\nFriend " + userToAdd.getEmail() + " added correctly to " + email);
                 }
-            });
+            }
 
-            //From here on it works
-
+            // Step 2: Add sender to userToAdd's friend list
             JSONResponse userDetailsJSON = getUserDetails(idToken, email);
             User tempUser = (User) userDetailsJSON.getData().get(0);
             System.out.println("\nUser to also add gotten? " + tempUser.getEmail());
 
             System.out.println("Adding to " + userToAdd.getEmail() + " ...");
 
-            collectionApiFuture2 = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", userToAdd.getEmail()).get();
-            collectionApiFuture2.get().forEach((doc) -> {
+            ApiFuture<QuerySnapshot> collectionApiFuture2 = dbFirestore.collection(CollectionName.USER.toString()).whereEqualTo("email", userToAdd.getEmail()).get();
+            QuerySnapshot receiverSnapshot = collectionApiFuture2.get();
+
+            for (QueryDocumentSnapshot doc : receiverSnapshot) {
                 if (Objects.equals(doc.get("email"), userToAdd.getEmail())) {
                     User userToShow = doc.toObject(User.class);
 
@@ -524,10 +525,17 @@ public class UserService implements Utils {
                     System.out.println("After add | " + tempList);
                     dataToShow.add(tempUser);
 
-                    dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
+                    try {
+                        ApiFuture<WriteResult> updateFuture = dbFirestore.collection(CollectionName.USER.toString()).document(doc.getId()).update("friends", tempList);
+                        updateFuture.get(); // Wait for the update to complete
+                        System.out.println("Update successful for document ID: " + doc.getId());
+                    } catch (Exception e) {
+                        System.out.println("Error updating the friends array at " + userToAdd.getEmail() + " | " + e.getMessage());
+                        e.printStackTrace();
+                    }
                     System.out.printf("\nFriend " + tempUser.getEmail() + " added correctly to %s! ", userToAdd.getEmail());
                 }
-            });
+            }
 
             return generateResponse(
                     200,
@@ -535,17 +543,16 @@ public class UserService implements Utils {
                     "Friends added successfully!",
                     dataToShow
             );
-            //https://firebase.google.com/docs/auth/admin/verify-id-tokens#java
-
         } catch (Exception e) {
             System.out.println("Error | " + e.getMessage());
             e.printStackTrace();
             return generateResponse(500,
                     LocalDateTime.now().toString(),
-                    "Error in adding the friend. Please contact support for further infromation.",
+                    "Error in adding the friend. Please contact support for further information.",
                     null);
         }
     }
+
 
 
     public JSONResponse deleteUserFriend(String idToken, String email, String friendEmail) throws ExecutionException, InterruptedException {

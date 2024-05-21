@@ -42,6 +42,12 @@ public class UserController {
         return userService.getUsers(idToken);
     }
 
+    @GetMapping("/user")
+    public JSONResponse getUser(@RequestHeader("idToken") String idToken, @RequestParam("email") String email) throws ExecutionException, InterruptedException {
+
+        return userService.getUserDetails(idToken, email);
+    }
+
     @GetMapping("/user/friends")
     public JSONResponse getUserFriends(@RequestHeader("idToken") String idToken, @RequestParam("email") String email) throws ExecutionException, InterruptedException {
 
@@ -71,13 +77,6 @@ public class UserController {
     public JSONResponse deleteFollowerToUser(@RequestHeader("idToken") String idToken, @RequestParam("email") String email, @RequestParam("userEmail") String userEmail) throws ExecutionException, InterruptedException {
 
         return userService.deleteFollowerToUser(idToken, email, userEmail);
-    }
-
-
-    @GetMapping("/user")
-    public JSONResponse getUser(@RequestHeader("idToken") String idToken, @RequestParam("email") String email) throws ExecutionException, InterruptedException {
-
-        return userService.getUserDetails(idToken, email);
     }
 
 
