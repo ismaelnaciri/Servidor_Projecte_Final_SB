@@ -47,6 +47,8 @@ public class UserService implements Utils {
         List<Object> dataToShow = new ArrayList<>();
         AtomicReference<Boolean> errorEncrypting = new AtomicReference<>(false);
 
+        user.setEmail(user.getEmail().toLowerCase().trim());
+
         try {
             if (user.getPassword().contains(":")) {
                 Map<String, Object> response = new HashMap<>();
